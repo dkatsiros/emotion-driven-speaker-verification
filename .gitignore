@@ -1,0 +1,11 @@
+# Embeddings
+embeddings/
+
+# Datasets
+datasets/
+
+# Environment
+env/
+
+# Python
+__pycache__/
