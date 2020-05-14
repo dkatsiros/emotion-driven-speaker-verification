@@ -1,3 +1,6 @@
+import librosa
+from config import SAMPLING_RATE
+
 def get_file_details(filename):
     """Split the filename, return the details."""
     import re
@@ -17,9 +20,13 @@ def get_file_details(filename):
     # Different attempts from the same speaker, on the same utterance
     # and the same emotion.
     version = file[6]
-    return filename, speaker, phrase, emotion, version
+    return speaker, phrase, emotion, version
 
-def load_emotions_mapping():
+
+def emotion2idx(emotion=None):
+    """Get an emotion in German and return a mapping."""
+    if emotion is None:
+        raise AssertionError
     mapping = {
         # Neutral
         'N': 0,
@@ -36,4 +43,16 @@ def load_emotions_mapping():
         # Boredom
         'L': 6
     }
-    return mapping
+    return mapping[emotion]
+
+
+def parse_wav(filename=None):
+    """Return read file using librosa."""
+    # Check file existance
+    if filename is None:
+        return None
+    # Load file using librosa
+    loaded_file = librosa.load(filename, sr=SAMPLING_RATE)
+    # Get file name details
+    speaker, phrase, emotion, version = get_file_details(filename)
+    return [loaded_file, int(speaker), phrase, emotion2idx(emotion), version]

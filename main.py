@@ -5,7 +5,7 @@ import glob2 as glob
 from config import EMB_PATH, EMB_DIM, EMB_FILE
 from config import DATASET_PATH, DATASET_FOLDER
 from utils.load_embeddings import load_word_vectors
-from utils.emodb import get_file_details, load_emotions_mapping
+from utils.emodb import parse_wav
 
 
 # EMBEDDINGS = os.path.join(EMB_PATH, EMB_FILE)
@@ -21,14 +21,12 @@ if not os.path.exists(DATASET):
 # Get filenames
 dataset_files = glob.iglob(''.join([DATASET,'*.wav']))
 # Store all files
-files = []
+parsed_wavs = []
+# Parse all files and extract features
 for file in dataset_files:
-    # Get filename, speaker, phrase, emotion, version
-    details = get_file_details(file)
-    # Skip if any mismatched files
-    if details == None:
-        print(f'File {file} skipped..')
-        continue
-    # Save file and details
-    files.append([*details])
+    # Read file using librosa and get all details
+    # returning [librosa_read, speaker, phrase, emotion2idx, version]
+    parsed_file = parse_wav(file)
+    parsed_wavs.append(parsed_file)
 
+print(parsed_wavs)
