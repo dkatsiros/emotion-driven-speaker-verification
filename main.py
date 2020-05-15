@@ -3,7 +3,9 @@ import os
 import glob2 as glob
 import numpy as np
 import joblib
+from sklearn.model_selection import train_test_split
 # Relative imports
+from models import svm
 from config import EMB_PATH, EMB_DIM, EMB_FILE
 from config import DATASET_PATH, DATASET_FOLDER
 from config import VARIABLES_FOLDER
@@ -18,6 +20,8 @@ from plotting.class_stats import class_statistics
 
 # word2idx, idx2word, embeddings = load_word_vectors(file=EMBEDDINGS, dim=EMB_DIM)
 
+#----------------------------
+# DATASET
 # Load dataset
 DATASET = os.path.join(DATASET_PATH, DATASET_FOLDER)
 # Check that the dataset folder exists
@@ -63,3 +67,16 @@ categories = get_indexes_for_wav_categories(parsed_files)
 # Plot original percentages of emotion classes
 class_statistics(categories, save=False)
 
+
+#----------------------------
+# MODEL
+# Create X:features to y:labels mapping
+X = np.array(features) # (#samples,78)
+y = np.array([f[3] for f in parsed_files], dtype=int) # (#samples,)
+
+# Split to train and test set
+X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                     shuffle=True, test_size=0.33)
+
+# Run svm classifier
+svm.use(X_train, y_train, X_test, y_test)
