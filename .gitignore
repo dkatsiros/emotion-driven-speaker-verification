@@ -9,6 +9,7 @@ env/
 
 # Python
 __pycache__/
+variables/
 
 # Sentiment
 basic_sentiment_analysis/
