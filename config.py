@@ -13,3 +13,7 @@ DATASET_FOLDER = "emodb/wav/"
 SAMPLING_RATE = 16000
 WINDOW_LENGTH = round(0.025 * SAMPLING_RATE)
 HOP_LENGTH = round(0.010 * SAMPLING_RATE)
+
+# Plotting
+## Folders
+PLOTS_FOLDER = "plotting/plots/"
