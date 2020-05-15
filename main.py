@@ -5,10 +5,10 @@ import numpy as np
 # Relative imports
 from config import EMB_PATH, EMB_DIM, EMB_FILE
 from config import DATASET_PATH, DATASET_FOLDER
+from utils.sound_processing import get_features_mean_var
 from utils.load_embeddings import load_word_vectors
-from utils.emodb import (parse_wav, get_mfcc_with_deltas,
-                        get_indexes_for_wav_categories,
-                        get_features_mean_var)
+from utils.emodb import (parse_wav,
+                        get_indexes_for_wav_categories)
 from plotting.class_stats import class_statistics
 
 
@@ -46,6 +46,4 @@ for file in dataset_files:
 categories = get_indexes_for_wav_categories(parsed_files)
 # Plot original percentages of emotion classes
 class_statistics(categories, save=False)
-
-# Get mean and variance along the second axis
 

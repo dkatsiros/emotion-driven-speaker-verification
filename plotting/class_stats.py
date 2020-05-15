@@ -18,6 +18,7 @@ def class_statistics(categories=None, save=True, filename='class_stats.png'):
     total_wavs = sum(y_axis)
     y_axis = [y/total_wavs * 100 for y in y_axis]
     if save is False:
+        print(f'Total wavs imported: {total_wavs}')
         print(f'Percentages of different emotion classes:')
         # Just print stats
         for emotion, percent in zip(x_axis, y_axis):
