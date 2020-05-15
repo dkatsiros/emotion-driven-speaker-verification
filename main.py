@@ -1,11 +1,13 @@
 # Absilute imports
 import os
 import glob2 as glob
+import numpy as np
 # Relative imports
 from config import EMB_PATH, EMB_DIM, EMB_FILE
 from config import DATASET_PATH, DATASET_FOLDER
 from utils.load_embeddings import load_word_vectors
-from utils.emodb import parse_wav
+from utils.emodb import (parse_wav, get_mfcc_with_deltas,
+                        get_indexes_for_wav_categories)
 
 
 # EMBEDDINGS = os.path.join(EMB_PATH, EMB_FILE)
@@ -27,6 +29,10 @@ for file in dataset_files:
     # Read file using librosa and get all details
     # returning [librosa_read, speaker, phrase, emotion2idx, version]
     parsed_file = parse_wav(file)
+    # Add files
     parsed_wavs.append(parsed_file)
+    features = get_mfcc_with_deltas(parsed_file[0])
 
-print(parsed_wavs)
+# Create indexes
+categories = get_indexes_for_wav_categories(parsed_wavs)
+print(categories)

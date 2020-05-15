@@ -1,5 +1,6 @@
 import librosa
-from config import SAMPLING_RATE
+import numpy as np
+from config import SAMPLING_RATE, WINDOW_LENGTH, HOP_LENGTH
 
 def get_file_details(filename):
     """Split the filename, return the details."""
@@ -9,8 +10,6 @@ def get_file_details(filename):
         return None
     # Regex match
     file = match.group(1)
-    # file = filename.split('/')[-1:]
-    # file = file[0]
     # Speaker
     speaker = file[:2]
     # Phrase
@@ -46,13 +45,53 @@ def emotion2idx(emotion=None):
     return mapping[emotion]
 
 
+def idx2emotion(idx=None):
+    """Return emotion name in English."""
+    if idx is None:
+        return None
+    # Create mapping
+    mapping = {
+        0: 'Neutral',
+        1: 'Anger',
+        2: 'Fear',
+        3: 'Joy',
+        4: 'Sadness',
+        5: 'Disgust',
+        6: 'Boredom'
+    }
+    return mapping[idx]
+
+
 def parse_wav(filename=None):
     """Return read file using librosa."""
     # Check file existance
     if filename is None:
         return None
     # Load file using librosa
-    loaded_file = librosa.load(filename, sr=SAMPLING_RATE)
+    loaded_file, _ = librosa.load(filename, sr=SAMPLING_RATE)
     # Get file name details
     speaker, phrase, emotion, version = get_file_details(filename)
     return [loaded_file, int(speaker), phrase, emotion2idx(emotion), version]
+
+
+def get_mfcc(wav, sr=SAMPLING_RATE):
+    return librosa.feature.mfcc(wav, sr, n_mfcc=13, win_length=WINDOW_LENGTH,
+                                hop_length=HOP_LENGTH)
+
+def get_mfcc_with_deltas(wav, sr=SAMPLING_RATE):
+    """Return MFCC, delta and delta-delta of a given wav."""
+    mfcc = get_mfcc(wav, sr)
+    mfcc_delta = librosa.feature.delta(mfcc, order=1)
+    mfcc_delta_delta = librosa.feature.delta(mfcc,order=2)
+    return np.concatenate((mfcc, mfcc_delta, mfcc_delta_delta))
+
+
+def get_indexes_for_wav_categories(files):
+    """Return a mapping (category) -> (indexes)."""
+    mapping = {i:[] for i in range(0,7)}
+    # Iterate each file and map
+    for idx, file in enumerate(files):
+        emotion_idx = file[3]
+        mapping[emotion_idx].append(idx)
+    return mapping
+
