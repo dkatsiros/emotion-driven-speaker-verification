@@ -46,18 +46,18 @@ def emotion2idx(emotion=None):
 def idx2emotion(idx=None):
     """Return emotion name in English."""
     if idx is None:
-        return None
+        raise ValueError
+    # Get classes
+    classes = get_classes()
     # Create mapping
-    mapping = {
-        0: 'Neutral',
-        1: 'Anger',
-        2: 'Fear',
-        3: 'Joy',
-        4: 'Sadness',
-        5: 'Disgust',
-        6: 'Boredom'
-    }
+    mapping = {i:c for i, c in enumerate(classes)}
     return mapping[idx]
+
+
+def get_classes():
+    return ['Neutral', 'Anger', 'Fear',
+             'Joy', 'Sadness', 'Disgust',
+             'Boredom']
 
 
 def parse_wav(filename=None):
