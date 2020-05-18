@@ -34,5 +34,6 @@ def class_statistics(categories=None, save=True, filename='class_stats.png'):
     # Labels
     plt.xlabel('Emotion')
     plt.ylabel('Percentage in total wavs')
+    plt.title('Classes')
     # Export diagram
     plt.savefig(file)

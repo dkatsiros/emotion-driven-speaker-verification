@@ -5,7 +5,7 @@ import numpy as np
 import joblib
 from sklearn.model_selection import train_test_split
 # Relative imports
-from models import svm
+from models import knn, svm, mlp
 from config import EMB_PATH, EMB_DIM, EMB_FILE
 from config import DATASET_PATH, DATASET_FOLDER
 from config import VARIABLES_FOLDER
@@ -65,7 +65,7 @@ except:
 # Create indexes
 categories = get_indexes_for_wav_categories(parsed_files)
 # Plot original percentages of emotion classes
-class_statistics(categories, save=False)
+class_statistics(categories, save=True)
 
 
 #----------------------------
@@ -79,4 +79,4 @@ X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                      shuffle=True, test_size=0.33)
 
 # Run svm classifier
-svm.use(X_train, y_train, X_test, y_test)
+mlp.use(X_train, y_train, X_test, y_test, oversampling=True)

@@ -22,7 +22,8 @@ def use(X_train, y_train, X_test, y_test, oversampling=False):
     scaler.transform(X_test)
     # Create classifier
     clf = SVC(gamma='auto', kernel='rbf')
-
+    # transform the results of the “one-versus-one” classifiers to a “one-vs-rest”
+    clf.decision_function_shape = "ovr"
     # Before training oversample
     if oversampling is True:
         X_train, y_train = SMOTE().fit_resample(X_train, y_train)
@@ -41,6 +42,7 @@ def use(X_train, y_train, X_test, y_test, oversampling=False):
     # Save confusion matrix
     plot_confusion_matrix(cm=conf_matrix,
                           classes=classes,
-                          filename='svm_unbalanced')
+                          filename=('svm_unbalanced'
+                           if oversampling is False else 'svm_balanced'))
     # Print report
     print(classification_report(y_test, y_pred, target_names=classes))

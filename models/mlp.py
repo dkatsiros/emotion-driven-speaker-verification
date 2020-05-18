@@ -1,10 +1,9 @@
-"""Provides a SVM model using sklearn."""
+from sklearn.neural_network import MLPClassifier
 
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
-from imblearn.over_sampling import SMOTE, ADASYN
+from imblearn.over_sampling import SMOTE
 
 from utils.emodb import get_classes
 from plotting.metrics import plot_confusion_matrix
@@ -21,7 +20,7 @@ def use(X_train, y_train, X_test, y_test, oversampling=False):
     scaler.transform(X_train)
     scaler.transform(X_test)
     # Create classifier
-    clf = KNeighborsClassifier(n_neighbors=5)
+    clf = MLPClassifier(random_state=1, hidden_layer_sizes=(50))
 
     # Before training oversample
     if oversampling is True:
@@ -41,7 +40,7 @@ def use(X_train, y_train, X_test, y_test, oversampling=False):
     # Save confusion matrix
     plot_confusion_matrix(cm=conf_matrix,
                           classes=classes,
-                          filename=('knn_balanced_SMOTE'
-                          if oversampling is True else 'knn_unbalanced'))
+                          filename=('mlp_balanced_SMOTE'
+                                    if oversampling is True else 'mlp_unbalanced'))
     # Print report
     print(classification_report(y_test, y_pred, target_names=classes))
