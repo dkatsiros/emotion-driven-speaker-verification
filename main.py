@@ -76,7 +76,9 @@ y = np.array([f[3] for f in parsed_files], dtype=int) # (#samples,)
 
 # Split to train and test set
 X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                     shuffle=True, test_size=0.33)
+                                                     shuffle=True, test_size=0.3,random_state=0)
 
 # Run svm classifier
-mlp.use(X_train, y_train, X_test, y_test, oversampling=True, pca=False)
+svm.use(X_train, y_train, X_test, y_test, oversampling=True, pca=False)
+
+svm.use_svm_cv(X,y,oversampling=False)

@@ -10,7 +10,7 @@ from utils.emodb import get_classes
 from plotting.metrics import plot_confusion_matrix
 
 
-def use(X_train, y_train, X_test, y_test, oversampling=False):
+def use(X_train, y_train, X_test, y_test, oversampling=False, pca=False):
     """Normalize data and then use the SVM model."""
     # Create standard scaler.
     scaler = StandardScaler()
