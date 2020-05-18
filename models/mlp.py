@@ -1,6 +1,7 @@
 from sklearn.neural_network import MLPClassifier
 
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from imblearn.over_sampling import SMOTE
@@ -9,7 +10,7 @@ from utils.emodb import get_classes
 from plotting.metrics import plot_confusion_matrix
 
 
-def use(X_train, y_train, X_test, y_test, oversampling=False):
+def use(X_train, y_train, X_test, y_test, oversampling=False, pca=False):
     """Normalize data and then use the SVM model."""
     # Create standard scaler.
     scaler = StandardScaler()
@@ -19,6 +20,15 @@ def use(X_train, y_train, X_test, y_test, oversampling=False):
     # Transform both train and test set
     scaler.transform(X_train)
     scaler.transform(X_test)
+    if pca is True:
+        # Principal Component Analysis
+        pca = PCA(n_components=10)
+        # Fit to train data
+        pca.fit(X_train)
+        print(pca.explained_variance_ratio_)
+        # Now transform
+        X_train = pca.transform(X_train)
+        X_test = pca.transform(X_test)
     # Create classifier
     clf = MLPClassifier(random_state=1, hidden_layer_sizes=(50))
 
@@ -37,10 +47,12 @@ def use(X_train, y_train, X_test, y_test, oversampling=False):
     conf_matrix = confusion_matrix(y_test, y_pred)
     # Get dataset classes
     classes = get_classes()
+    filename = ('mlp_balanced_SMOTE'
+                if oversampling is True else 'mlp_unbalanced')
+    filename = ''.join([filename ,'_pca']) if pca is True else filename
     # Save confusion matrix
     plot_confusion_matrix(cm=conf_matrix,
                           classes=classes,
-                          filename=('mlp_balanced_SMOTE'
-                                    if oversampling is True else 'mlp_unbalanced'))
+                          filename=filename)
     # Print report
     print(classification_report(y_test, y_pred, target_names=classes))
