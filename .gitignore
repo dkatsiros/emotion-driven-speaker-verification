@@ -11,8 +11,5 @@ env/
 __pycache__/
 variables/
 
-# Sentiment
-basic_sentiment_analysis/
-
 # Plots
 plotting/plots/
