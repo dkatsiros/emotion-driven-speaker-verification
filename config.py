@@ -6,6 +6,8 @@ EMB_FILE = "glove.6B.50d.txt"
 EMB_DIM = 50
 
 # Dataset
+DATASET = "EMODB"
+FEATURE_EXTRACTOR = "MFCC"
 ## Files
 DATASET_PATH = "datasets"
 DATASET_FOLDER = "emodb/wav/"
