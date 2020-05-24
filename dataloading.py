@@ -23,12 +23,14 @@ class EmodbDataset(Dataset):
             y = np.array([emodb.emotion2idx(lbl) for lbl in y], dtype=int)
             # Create tensor for labels
             self.y = torch.tensor(y, dtype=int)
+            X = [sound_processing.get_mfcc_with_deltas(x) for x in X_parsed]
             # X: (#samples, seq_len, #features)
-            X = np.array([sound_processing.get_mfcc_with_deltas(x) for x in X_parsed])
+            X = [np.swapaxes(x, 0, 1) for x in X]
+
             # Get all lengths before zero padding
             self.lengths = np.array([len(x) for x in X])
             # Zero pad all samples
-            X = X = self.zero_pad_and_stack(X)
+            X = self.zero_pad_and_stack(X)
             # Create tensor for features
             self.X = torch.from_numpy(X).type('torch.FloatTensor')
 
@@ -62,8 +64,9 @@ class EmodbDataset(Dataset):
         Returns:
             padded: a 3D numpy array of shape num_sequences x max_sequence_length x feature_dimension
         """
+
         max_length = self.lengths.max()
-        feature_dim = X.shape[2]
+        feature_dim = X[0].shape[-1]
         padded = np.zeros((len(X), max_length, feature_dim))
 
         # Do the actual work
@@ -73,6 +76,5 @@ class EmodbDataset(Dataset):
                 diff = max_length - X[i].shape[0]
                 # pad
                 X[i] = np.vstack((X[i], np.zeros((diff, feature_dim))))
-            padded[i,:,:] = X[i]
-        # Return tensor
+            padded[i, :, :] = X[i]
         return padded
