@@ -73,3 +73,8 @@ class LSTM(nn.Module):
         idx = (lengths - 1).view(-1, 1).expand(outputs.size(0),
                                                outputs.size(2)).unsqueeze(1)
         return outputs.gather(1, idx).squeeze()
+
+
+    @staticmethod
+    def count_parameters(model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)

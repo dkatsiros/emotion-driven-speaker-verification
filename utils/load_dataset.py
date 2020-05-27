@@ -2,14 +2,15 @@ import os
 import glob2 as glob
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
+from imblearn.over_sampling import SMOTE
 from utils import emodb
 
 
-def load_Emodb(test_eval=[0.3,0.2], evaluation=True):
+def load_Emodb(test_val=[0.3,0.2], validation=True, oversampling=True):
     """Return X_train, y_train, X_test, y_test of EMODB dataset."""
 
     # Get percentages
-    test_p, eval_p = test_eval
+    test_p, val_p = test_val
 
     # Files
     DATASET_PATH = "datasets"
@@ -27,7 +28,7 @@ def load_Emodb(test_eval=[0.3,0.2], evaluation=True):
     X_train_, y_train_ = [], []
     X_test, y_test = [], []
     X_train, y_train = [], []
-    X_eval, y_eval = [], []
+    X_val, y_val = [], []
     # First split
     sss = StratifiedShuffleSplit(n_splits=1, test_size=test_p)
     train_idx, test_idx = next(sss.split(dataset_files_raw, dataset_labels_raw))
@@ -40,24 +41,24 @@ def load_Emodb(test_eval=[0.3,0.2], evaluation=True):
         X_test.append(dataset_files_raw[idx])
         y_test.append(dataset_labels_raw[idx])
 
-    if evaluation is False:
+    # Before training oversample
+    # if oversampling is True:
+    #     X_train_ = [[x] for x in X_train_]
+    #     X_train_, y_train_ = SMOTE().fit_resample(X_train_, y_train_)
+
+    if validation is False:
         return X_train_, y_train_, X_test, y_test
 
-    # If evaluation is True split again
-    sss = StratifiedShuffleSplit(n_splits=1, test_size=eval_p)
-    train_idx, eval_idx = next(sss.split(X_train_,y_train_))
+    # If valuation is True split again
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=val_p)
+    train_idx, val_idx = next(sss.split(X_train_,y_train_))
     # Train after both splits
     for idx in train_idx:
         X_train.append(X_train_[idx])
         y_train.append(y_train_[idx])
-    # Evaluation
-    for idx in eval_idx:
-        X_eval.append(X_train_[idx])
-        y_eval.append(y_train_[idx])
+    # validation
+    for idx in val_idx:
+        X_val.append(X_train_[idx])
+        y_val.append(y_train_[idx])
 
-    # # Split to train and test set
-    # X_train_, X_test, y_train_, y_test = train_test_split(dataset_files_raw,
-    #                                                     dataset_labels_raw,
-    #                                                     shuffle=True,
-    #                                                     test_size=0.3)
-    return X_train, y_train, X_test, y_test, X_eval, y_eval
+    return X_train, y_train, X_test, y_test, X_val, y_val

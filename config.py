@@ -14,6 +14,7 @@ DATASET_FOLDER = "emodb/wav/"
 
 # Stored variables
 VARIABLES_FOLDER = "variables/"
+RECOMPUTE = True
 
 # Sampling process
 SAMPLING_RATE = 16000
