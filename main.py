@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from torch.nn import functional as F
 
 from models.lstm import LSTM
+from models.cnn import CNN
 from training import train, validate, progress, fit, print_results
 from config import VARIABLES_FOLDER, RECOMPUTE
 import os
@@ -16,12 +17,15 @@ X_train, y_train, X_test, y_test, X_eval, y_eval = load_Emodb()
 
 # PyTorch
 BATCH_SIZE = len(X_train) // 20
-EPOCHS = 50
+EPOCHS = 100
 
 # Load sets using dataset class
-train_set = EmodbDataset(X_train, y_train, oversampling=True)
-test_set = EmodbDataset(X_test, y_test)
-eval_set = EmodbDataset(X_eval, y_eval)
+train_set = EmodbDataset(X_train, y_train, oversampling=True,
+                         feature_extraction_method="MEL_SPECTROGRAM")
+test_set = EmodbDataset(X_test, y_test,
+                        feature_extraction_method="MEL_SPECTROGRAM")
+eval_set = EmodbDataset(X_eval, y_eval,
+                        feature_extraction_method = "MEL_SPECTROGRAM")
 
 
 # PyTorch DataLoader
@@ -55,18 +59,16 @@ except:
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Create a model
-model = LSTM(input_size=39, hidden_size=16, output_size=7, num_layers=3,
-             bidirectional=False, dropout=0)
+# model = LSTM(input_size=39, hidden_size=16, output_size=7, num_layers=1,
+#              bidirectional=False, dropout=0.1)
 
+model = CNN(10)
 print(f'Model Parameters: {model.count_parameters(model)}')
 
 # move model weights to device
 model.to(DEVICE)
 print(model)
 
-criterion = torch.nn.CrossEntropyLoss()
-parameters = model.parameters()
-optimizer = optim.Adam(parameters)
 
 #############################################################################
 # Training Pipeline
@@ -77,13 +79,13 @@ early_stopping = False
 
 print(next(iter(train_loader)))
 
-_model, t_loss, v_loss = fit(model, EPOCHS, lr=0.1,
+model, t_loss, v_loss = fit(model, EPOCHS, lr=1,
                             loader=train_loader, v_loader=valid_loader,
                             earlyStopping=False)
 
-modelname = os.path.join(VARIABLES_FOLDER, f'{_model.__class__.__name__}.pkl')
+modelname = os.path.join(VARIABLES_FOLDER, f'{model.__class__.__name__}.pkl')
 # Save model for later use
-joblib.dump(_model, modelname)
+joblib.dump(model, modelname)
 
 
 #Final requested results

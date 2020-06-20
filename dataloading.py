@@ -27,27 +27,40 @@ class EmodbDataset(Dataset):
             # Reshape again for use
             X = np.squeeze(X)
 
+        # Depending on extraction method get X
+        if feature_extraction_method == "MEL_SPECTROGRAM":
+            # Get file read using librosa
+            X_parsed = [emodb.parse_wav(x)[0] for x in X]
+            # Get spectrogram
+            X_parsed = [sound_processing.get_melspectrogram(x) for x in X_parsed]
+            #(features,seq_len) -> (seq_len,features)
+            X = [np.swapaxes(x, 0, 1) for x in X_parsed]
+            # sound_processing.preview_melspectrogram(X_parsed[1],filename='test.png')
+
         if feature_extraction_method == "MFCC":
             # Get file read using librosa
             X_parsed = [emodb.parse_wav(x)[0] for x in X]
-            # Labels
-            y = np.array([emodb.emotion2idx(lbl) for lbl in y], dtype=int)
+            # Get features
             X = [sound_processing.get_mfcc_with_deltas(x) for x in X_parsed]
             # X: (#samples, seq_len, #features)
             X = [np.swapaxes(x, 0, 1) for x in X]
 
-            # Create tensor for labels
-            self.y = torch.tensor(y, dtype=int)
-            # Get all lengths before zero padding
-            lengths = np.array([len(x) for x in X])
-            self.lengths = torch.tensor(lengths)
-            # Zero pad all samples
-            X = self.zero_pad_and_stack(X)
-            # Create tensor for features
-            self.X = torch.from_numpy(X).type('torch.FloatTensor')
-            print(np.shape(self.X))
-            print(np.shape(self.lengths))
-            print(np.shape(self.y))
+
+        # Labels
+        y = np.array([emodb.emotion2idx(lbl) for lbl in y], dtype=int)
+
+        # Create tensor for labels
+        self.y = torch.tensor(y, dtype=int)
+        # Get all lengths before zero padding
+        lengths = np.array([len(x) for x in X])
+        self.lengths = torch.tensor(lengths)
+        # Zero pad all samples
+        X = self.zero_pad_and_stack(X)
+        # Create tensor for features
+        self.X = torch.from_numpy(X).type('torch.FloatTensor')
+        print(np.shape(self.X))
+        print(np.shape(self.lengths))
+        print(np.shape(self.y))
 
 
     def __len__(self):

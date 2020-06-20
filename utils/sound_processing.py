@@ -49,3 +49,40 @@ def get_features_mean_var(loaded_wav=None):
     variance = np.var(mfccs, axis=1)  # (39,1)
     # Export the features - order 'F' to preserve (m1,v1,m2,v2, ... )
     return np.ravel((mean, variance), order='F')  # (78,) -- 1darray
+
+
+def get_melspectrogram(loaded_wav=None):
+    """Returns a mel spectrogram."""
+
+    if loaded_wav is None:
+        return None
+
+    spct = librosa.feature.melspectrogram(y=loaded_wav, sr=SAMPLING_RATE)
+
+    return spct
+
+
+def preview_melspectrogram(spectrogram=None,filename=None):
+    """Save a given spectrogram as an image."""
+
+    if spectrogram is None or filename is None:
+        raise AssertionError
+
+    import matplotlib.pyplot as plt
+    import librosa.display
+
+    plt.figure(figsize=(10, 4))
+    spectrogram_dB = librosa.power_to_db(spectrogram, ref=np.max)
+    librosa.display.specshow(spectrogram_dB)
+    plt.colorbar(format='%+2.0f dB')
+    plt.title('Mel-frequency spectrogram')
+    plt.tight_layout()
+    plt.savefig('test.png')
+    exit()
+
+
+def read_mel_spectrogram(spectrogram_file):
+    spectrogram = np.load(spectrogram_file)
+    print(spectrogram)
+    spectrogram = spectrogram[:128]
+    return spectrogram.T
