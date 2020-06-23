@@ -20,6 +20,7 @@ def train_and_validate(model,
                        loss_function,
                        optimizer,
                        epochs,
+                       cnn=False,
                        cross_validation_epochs=5,
                        early_stopping=False):
     """
@@ -47,14 +48,14 @@ def train_and_validate(model,
 
         # ===== Training HERE =====
         train_loss = train(epoch, train_loader, model,
-                           loss_function, optimizer)
+                           loss_function, optimizer, cnn=cnn)
         # Store statistics for later usage
         all_train_loss.append(train_loss)
 
         # ====== VALIDATION HERE ======
         if epoch % CROSS_VALIDATION_EPOCHS == 0:
             valid_loss = validate(epoch, valid_loader,
-                                  model, loss_function)
+                                  model, loss_function, cnn=cnn)
             # Store model but on cpu
             models.append(deepcopy(model).to('cpu'))
             # Remove first model when adding one new if len(models)>5
@@ -90,7 +91,7 @@ def train_and_validate(model,
     return best_model, all_train_loss, all_valid_loss, epoch
 
 
-def train(_epoch, dataloader, model, loss_function, optimizer):
+def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
     # Set model to train mode
     model.train()
     training_loss = 0.0
@@ -111,9 +112,12 @@ def train(_epoch, dataloader, model, loss_function, optimizer):
         optimizer.zero_grad()
 
         # Forward pass: y' = model(x)
-        try:
+        if cnn is False:
             y_preds = model.forward(inputs, lengths)
-        except:
+        else:
+            # We got a CNN
+            # Add a new axis for CNN filter features, [z-axis]
+            inputs = inputs[:, np.newaxis, :, :]
             y_preds = model.forward(inputs)
 
         # Compute loss: L = loss_function(y', y)
@@ -139,7 +143,7 @@ def train(_epoch, dataloader, model, loss_function, optimizer):
     return training_loss / len(dataloader)
 
 
-def validate(_epoch, dataloader, model, loss_function):
+def validate(_epoch, dataloader, model, loss_function, cnn=False):
     """Validate the model."""
 
     # Put model to evalutation mode
@@ -160,7 +164,13 @@ def validate(_epoch, dataloader, model, loss_function):
             labels = labels.to(device)
 
             # Forward through the network
-            y_pred = model.forward(inputs, lengths)
+            if cnn is False:
+                y_pred = model.forward(inputs, lengths)
+            else:
+                # We got CNN
+                # Add a new axis for CNN filter features, [z-axis]
+                inputs = inputs[:, np.newaxis, :, :]
+                y_pred = model.forward(inputs)
 
             # Compute loss
             loss = loss_function(y_pred, labels)
@@ -174,7 +184,7 @@ def validate(_epoch, dataloader, model, loss_function):
     return valid_loss / len(dataloader)
 
 
-def test(model, dataloader):
+def test(model, dataloader, cnn=False):
     """
     Tests a given model.
     Returns an array with predictions and an array with labels.
@@ -195,8 +205,12 @@ def test(model, dataloader):
         labels = labels.to(device)
 
         # Forward through the network
-        out = model.forward(inputs, lengths)
-
+        if cnn is False:
+            out = model.forward(inputs, lengths)
+        else:
+            # Add a new axis for CNN filter features, [z-axis]
+            inputs = inputs[:, np.newaxis, :, :]
+            out = model.forward(inputs)
         # Predict the one with the maximum probability
         predictions = F.softmax(out, dim=-1).argmax(dim=-1)
 
@@ -240,15 +254,16 @@ def results(model, train_loss, valid_loss, y_pred, y_true, epochs, timestamp, cv
     plt.ylabel('Train - Validation Loss')
     plt.xlabel('Epoch')
     try:
-        plt.plot(list(range(1, epochs + 1)), train_loss, color='r')
-        print('len valid loss', len(valid_loss))
+        plt.plot(list(range(1, epochs + 1)), train_loss,
+                 color='r', label='Training')
         vld_values = np.array([[l]*cv for l in valid_loss]).flatten()
         # Add some missing values below
         vld_values = np.concatenate(
             (vld_values, np.array([valid_loss[-1]]*(epochs % cv))))
-        # valid_loss_for_plot = np.array(
-        #     [[l]*cv for l in valid_loss]).flatten()[:-(cv-epochs % cv)]  # remove extra elements
-        plt.plot(list(range(1, epochs + 1)), vld_values, color='b')
+
+        plt.plot(list(range(1, epochs + 1)), vld_values,
+                 color='b', label='Validation')
+        plt.legend()
         plot_filename = f'train_valid_loss_{model.__class__.__name__}_{epochs}_{timestamp}.png'
         plt.savefig(
             f'plotting/plots/{plot_filename}')

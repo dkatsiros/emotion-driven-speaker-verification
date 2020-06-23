@@ -33,7 +33,7 @@ class CNN(nn.Module):
         self.dropout1 = nn.Dropout2d(0.25)  # dropout
         self.dropout2 = nn.Dropout2d(0.5)
 
-        self.fc1 = nn.Linear(6240, 4096)   # linear layer
+        self.fc1 = nn.Linear(7200, 4096)   # linear layer
         self.fc2 = nn.Linear(4096, 1024)
         self.fc3 = nn.Linear(1024, 256)
         self.fc4 = nn.Linear(256, output_dim)
@@ -42,7 +42,7 @@ class CNN(nn.Module):
         # input: (batch_size,1,max_seq,features)
         # Each layer applies the following matrix tranformation
         # recursively: (batch_size,conv_output,max_seq/2 -1,features/2 -1)
-        print('Original x:', np.shape(x))
+        # print('Original x:', np.shape(x))
         x = F.max_pool2d(F.relu(self.conv1_bn(self.conv1(x))),
                          2)  # [14, 10, 119, 63]
         # print('Conv1:', np.shape(x))
@@ -58,7 +58,7 @@ class CNN(nn.Module):
 
         x = F.max_pool2d(F.relu(self.conv4_bn(self.conv4(x))),
                          2)  # [14, 80, 13, 6]
-        print('Conv4:', np.shape(x))
+        # print('Conv4:', np.shape(x))
 
         # batch_size x new_dim(ginomeno ton allon)
         x = F.relu(self.fc1(x.view(len(x), -1)))

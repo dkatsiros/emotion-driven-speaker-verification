@@ -21,15 +21,18 @@ X_train, y_train, X_test, y_test, X_eval, y_eval = load_Emodb()
 
 # PyTorch
 BATCH_SIZE = len(X_train) // 20
+print(f'Selected Batch Size: {BATCH_SIZE}')
 EPOCHS = 500
 
+CNN_BOOLEAN = True
+
 # Load sets using dataset class
-train_set = EmodbDataset(X_train, y_train, oversampling=True)  # ,
-# feature_extraction_method="MEL_SPECTROGRAM")
-test_set = EmodbDataset(X_test, y_test)  # ,
-# feature_extraction_method="MEL_SPECTROGRAM")
-eval_set = EmodbDataset(X_eval, y_eval)  # ,
-# feature_extraction_method = "MEL_SPECTROGRAM")
+train_set = EmodbDataset(X_train, y_train, oversampling=True,
+                         feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
+test_set = EmodbDataset(
+    X_test, y_test, feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
+eval_set = EmodbDataset(
+    X_eval, y_eval, feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
 
 
 # PyTorch DataLoader
@@ -67,10 +70,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'Running on: {device}.\n')
 
 # Create a model
-model = LSTM(input_size=39, hidden_size=16, output_size=7, num_layers=1,
-             bidirectional=False, dropout=0.1)
+# model = LSTM(input_size=39, hidden_size=16, output_size=7, num_layers=1,
+#  bidirectional=False, dropout=0.1)
 
-# model = CNN(10)
+model = CNN(output_dim=7)
 print(f'Model Parameters: {model.count_parameters(model)}')
 
 # move model weights to device
@@ -98,6 +101,7 @@ best_model, train_losses, valid_losses, _epochs = train_and_validate(model=model
                                                                      loss_function=loss_function,
                                                                      optimizer=optimizer,
                                                                      epochs=EPOCHS,
+                                                                     cnn=CNN_BOOLEAN,
                                                                      cross_validation_epochs=5,
                                                                      early_stopping=True)
 
@@ -108,7 +112,7 @@ modelname = os.path.join(
 # Save model for later use
 joblib.dump(best_model, modelname)
 # ===== TEST =====
-y_pred, y_true = test(best_model, test_loader)
+y_pred, y_true = test(best_model, test_loader, cnn=CNN_BOOLEAN)
 # ===== RESULTS =====
 results(model=best_model, train_loss=train_losses, valid_loss=valid_losses,
         y_pred=y_pred, y_true=y_true, epochs=_epochs, cv=CROSS_VALIDATION_EPOCHS, timestamp=timestamp)
