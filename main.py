@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from copy import deepcopy
 import torch
 from torch import optim
@@ -9,7 +10,7 @@ from torch.nn import functional as F
 
 from models.lstm import LSTM
 from models.cnn import CNN
-from training import train_and_validate, test, print_results, results
+from training import train_and_validate, test, results
 # progress, fit, print_results
 from config import VARIABLES_FOLDER, RECOMPUTE
 import os
@@ -20,7 +21,7 @@ X_train, y_train, X_test, y_test, X_eval, y_eval = load_Emodb()
 
 # PyTorch
 BATCH_SIZE = len(X_train) // 20
-EPOCHS = 5
+EPOCHS = 500
 
 # Load sets using dataset class
 train_set = EmodbDataset(X_train, y_train, oversampling=True)  # ,
@@ -62,8 +63,9 @@ except:
     joblib.dump(valid_loader, VALID_LOADER)
 
 # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f'Running on: {DEVICE}.\n')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f'Running on: {device}.\n')
+
 # Create a model
 model = LSTM(input_size=39, hidden_size=16, output_size=7, num_layers=1,
              bidirectional=False, dropout=0.1)
@@ -72,7 +74,7 @@ model = LSTM(input_size=39, hidden_size=16, output_size=7, num_layers=1,
 print(f'Model Parameters: {model.count_parameters(model)}')
 
 # move model weights to device
-model.to(DEVICE)
+model.to(device)
 print(model)
 
 
@@ -89,21 +91,24 @@ loss_function = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adadelta(
     model.parameters(), lr=learning_rate, rho=0.9, eps=1e-06, weight_decay=L2)
 CROSS_VALIDATION_EPOCHS = 5
-best_model, train_losses, valid_losses = train_and_validate(model=model,
-                                                            train_loader=train_loader,
-                                                            valid_loader=valid_loader,
-                                                            loss_function=loss_function,
-                                                            optimizer=optimizer,
-                                                            epochs=EPOCHS,
-                                                            cross_validation_epochs=5,
-                                                            early_stopping=True)
+
+best_model, train_losses, valid_losses, _epochs = train_and_validate(model=model,
+                                                                     train_loader=train_loader,
+                                                                     valid_loader=valid_loader,
+                                                                     loss_function=loss_function,
+                                                                     optimizer=optimizer,
+                                                                     epochs=EPOCHS,
+                                                                     cross_validation_epochs=5,
+                                                                     early_stopping=True)
+
+timestamp = time.ctime()
 
 modelname = os.path.join(
-    VARIABLES_FOLDER, f'{best_model.__class__.__name__}.pkl')
+    VARIABLES_FOLDER, f'{best_model.__class__.__name__}_{_epochs}_{timestamp}.pkl')
 # Save model for later use
 joblib.dump(best_model, modelname)
 # ===== TEST =====
 y_pred, y_true = test(best_model, test_loader)
 # ===== RESULTS =====
 results(model=best_model, train_loss=train_losses, valid_loss=valid_losses,
-        y_pred=y_pred, y_true=y_true, epochs=EPOCHS, cv=CROSS_VALIDATION_EPOCHS)
+        y_pred=y_pred, y_true=y_true, epochs=_epochs, cv=CROSS_VALIDATION_EPOCHS, timestamp=timestamp)

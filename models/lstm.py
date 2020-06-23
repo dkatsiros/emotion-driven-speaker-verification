@@ -54,7 +54,8 @@ class LSTM(nn.Module):
         out, _ = self.lstm(x, (h0, c0))
 
         # Remove sequence dimension, keep only last idx
-        last = self.last_by_index(out, torch.tensor(lengths)) # (N,D)
+        last = self.last_by_index(
+            out, torch.tensor(lengths).to(DEVICE))  # (N,D)
 
         # maybe by concatenation of the last,mean_pool,max_pool
         # representations = torch.cat((last, mean_pool, max_pool), 1)
