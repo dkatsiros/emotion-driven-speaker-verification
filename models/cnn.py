@@ -14,7 +14,7 @@ from torch.utils.data import SubsetRandomSampler, DataLoader
 
 
 class CNN(nn.Module):
-    def __init__(self, output_dim=10, regression=False, multitask=False):
+    def __init__(self, output_dim=7, regression=False, multitask=False):
         super(CNN, self).__init__()
 
         self.regression = regression
@@ -33,29 +33,35 @@ class CNN(nn.Module):
         self.dropout1 = nn.Dropout2d(0.25)  # dropout
         self.dropout2 = nn.Dropout2d(0.5)
 
-        self.fc1 = nn.Linear(37440, 8192)   # linear layer
-        self.fc2 = nn.Linear(8192, 1024)
+        self.fc1 = nn.Linear(6240, 4096)   # linear layer
+        self.fc2 = nn.Linear(4096, 1024)
         self.fc3 = nn.Linear(1024, 256)
         self.fc4 = nn.Linear(256, output_dim)
 
     def forward(self, x):
-        # batch_size x 10x1293x128
-        x = F.max_pool2d(F.relu(self.conv1_bn(self.conv1(x))), 2)
+        # input: (batch_size,1,max_seq,features)
+        # Each layer applies the following matrix tranformation
+        # recursively: (batch_size,conv_output,max_seq/2 -1,features/2 -1)
+        print('Original x:', np.shape(x))
+        x = F.max_pool2d(F.relu(self.conv1_bn(self.conv1(x))),
+                         2)  # [14, 10, 119, 63]
+        # print('Conv1:', np.shape(x))
+        x = F.max_pool2d(F.relu(self.conv2_bn(self.conv2(x))),
+                         2)  # [14, 20, 58, 30]
+        # print('Conv2:', np.shape(x))
 
-        # batch_size x 20x645x63
-        x = F.max_pool2d(F.relu(self.conv2_bn(self.conv2(x))), 2)
+        x = self.dropout1(x)  # [14, 20, 58, 30]
+        # print('Dropout1:', np.shape(x))
+        x = F.max_pool2d(F.relu(self.conv3_bn(self.conv3(x))),
+                         2)  # [14, 40, 28, 14]
+        # print('Conv3:', np.shape(x))
 
-        # batch_size x 20 x 321 x 30
-        x = self.dropout1(x)
+        x = F.max_pool2d(F.relu(self.conv4_bn(self.conv4(x))),
+                         2)  # [14, 80, 13, 6]
+        print('Conv4:', np.shape(x))
 
-        # batch_size x 40x159x14
-        x = F.max_pool2d(F.relu(self.conv3_bn(self.conv3(x))), 2)
-
-        # batch_size x 80x78x6
-        x = F.max_pool2d(F.relu(self.conv4_bn(self.conv4(x))), 2)
-
-        # batch_size x 80x78x5, 80 * 78 * 5 = 37440
-        x = F.relu(self.fc1(x.view(-1, 37440)))
+        # batch_size x new_dim(ginomeno ton allon)
+        x = F.relu(self.fc1(x.view(len(x), -1)))
         x = self.dropout2(F.relu(self.fc2(x)))
         x = self.dropout2(F.relu(self.fc3(x)))
         x = F.relu(self.fc4(x))

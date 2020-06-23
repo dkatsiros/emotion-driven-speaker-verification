@@ -3,6 +3,7 @@ import os
 import numpy as np
 from config import WINDOW_LENGTH, HOP_LENGTH, SAMPLING_RATE
 
+
 def load_wav(filename):
     """Return read file using librosa library."""
     if not os.path.exists(filename):
@@ -57,28 +58,32 @@ def get_melspectrogram(loaded_wav=None):
     if loaded_wav is None:
         return None
 
-    spct = librosa.feature.melspectrogram(y=loaded_wav, sr=SAMPLING_RATE)
+    # Get spectrogram
+    spectrogram = librosa.feature.melspectrogram(
+        y=loaded_wav, sr=SAMPLING_RATE)  # , hop_length=HOP_LENGTH, n_fft=2048)
+    # Convert to MEL-Scale
+    spectrogram_dB = librosa.power_to_db(spectrogram, ref=np.max)  # (n_mel,t)
+    # Transpose to return (time,n_mel)
+    return spectrogram_dB.T
 
-    return spct
 
-
-def preview_melspectrogram(spectrogram=None,filename=None):
+def preview_melspectrogram(spectrogram=None, filename='spectrogram.png'):
     """Save a given spectrogram as an image."""
 
-    if spectrogram is None or filename is None:
+    if spectrogram is None:
         raise AssertionError
 
     import matplotlib.pyplot as plt
     import librosa.display
 
     plt.figure(figsize=(10, 4))
-    spectrogram_dB = librosa.power_to_db(spectrogram, ref=np.max)
-    librosa.display.specshow(spectrogram_dB)
+    # Spectrogram already in mel scale
+    librosa.display.specshow(spectrogram)
     plt.colorbar(format='%+2.0f dB')
     plt.title('Mel-frequency spectrogram')
     plt.tight_layout()
-    plt.savefig('test.png')
-    exit()
+    plt.savefig(filename)
+    return plt
 
 
 def read_mel_spectrogram(spectrogram_file):
