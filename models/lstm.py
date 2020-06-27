@@ -2,11 +2,12 @@ import torch
 from torch import nn
 import numpy as np
 
+
 class LSTM(nn.Module):
     """LSTM implementation."""
 
     def __init__(self, input_size, hidden_size=16, output_size=7, num_layers=1,
-                bidirectional=False, dropout=0):
+                 bidirectional=False, dropout=0):
 
         super(LSTM, self).__init__()
 
@@ -25,7 +26,6 @@ class LSTM(nn.Module):
         # Final layer
         self.linear = nn.Linear(self.hidden_size, output_size)
         self.softmax = nn.Softmax()
-
 
     def forward(self, x, lengths):
         """
@@ -62,11 +62,11 @@ class LSTM(nn.Module):
 
         # Pass the output of LSTM to the remaining network, projecting to classes
         representations = self.linear(last)
+        return representations
         # Convert to probabilities
         logits = self.softmax(representations)
 
         return logits
-
 
     @staticmethod
     def last_by_index(outputs, lengths):
@@ -74,7 +74,6 @@ class LSTM(nn.Module):
         idx = (lengths - 1).view(-1, 1).expand(outputs.size(0),
                                                outputs.size(2)).unsqueeze(1)
         return outputs.gather(1, idx).squeeze()
-
 
     @staticmethod
     def count_parameters(model):

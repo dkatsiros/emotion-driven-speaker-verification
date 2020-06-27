@@ -6,7 +6,7 @@ from imblearn.over_sampling import SMOTE
 from utils import emodb
 
 
-def load_Emodb(test_val=[0.3,0.2], validation=True, oversampling=True):
+def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True):
     """Return X_train, y_train, X_test, y_test of EMODB dataset."""
 
     # Get percentages
@@ -22,7 +22,8 @@ def load_Emodb(test_val=[0.3,0.2], validation=True, oversampling=True):
         raise FileNotFoundError
     # Get filenames
     dataset_files_raw = [x for x in glob.iglob(''.join([DATASET, '*.wav']))]
-    dataset_labels_raw = [emodb.get_file_details(file)[2] for file in dataset_files_raw]
+    dataset_labels_raw = [emodb.get_file_details(
+        file)[2] for file in dataset_files_raw]
 
     # Initialize
     X_train_, y_train_ = [], []
@@ -31,7 +32,8 @@ def load_Emodb(test_val=[0.3,0.2], validation=True, oversampling=True):
     X_val, y_val = [], []
     # First split
     sss = StratifiedShuffleSplit(n_splits=1, test_size=test_p)
-    train_idx, test_idx = next(sss.split(dataset_files_raw, dataset_labels_raw))
+    train_idx, test_idx = next(
+        sss.split(dataset_files_raw, dataset_labels_raw))
     # Train
     for idx in train_idx:
         X_train_.append(dataset_files_raw[idx])
@@ -51,7 +53,7 @@ def load_Emodb(test_val=[0.3,0.2], validation=True, oversampling=True):
 
     # If valuation is True split again
     sss = StratifiedShuffleSplit(n_splits=1, test_size=val_p)
-    train_idx, val_idx = next(sss.split(X_train_,y_train_))
+    train_idx, val_idx = next(sss.split(X_train_, y_train_))
     # Train after both splits
     for idx in train_idx:
         X_train.append(X_train_[idx])

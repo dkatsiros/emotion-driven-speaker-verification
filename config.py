@@ -8,7 +8,7 @@ EMB_DIM = 50
 # Dataset
 DATASET = "EMODB"
 FEATURE_EXTRACTOR = "MFCC"
-## Files
+# Files
 DATASET_PATH = "datasets"
 DATASET_FOLDER = "emodb/wav/"
 
@@ -22,5 +22,6 @@ WINDOW_LENGTH = round(0.025 * SAMPLING_RATE)
 HOP_LENGTH = round(0.010 * SAMPLING_RATE)
 
 # Plotting
-## Folders
+# Folders
 PLOTS_FOLDER = "plotting/plots/"
+REPORTS_FOLDER = 'plotting/reports/'

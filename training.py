@@ -1,5 +1,6 @@
 import torch
 from torch.nn import functional as F
+import os
 import sys
 import math
 from copy import deepcopy
@@ -12,6 +13,7 @@ from sklearn.metrics import confusion_matrix
 from utils.emodb import get_classes
 from sklearn.metrics import f1_score, accuracy_score
 from plotting.metrics import plot_confusion_matrix
+from config import PLOTS_FOLDER, REPORTS_FOLDER
 
 
 def train_and_validate(model,
@@ -39,6 +41,7 @@ def train_and_validate(model,
     best_model = model
 
     # Store losses, models
+    all_accuracy_training = []
     all_train_loss = []
     all_valid_loss = []
     models = []
@@ -47,10 +50,11 @@ def train_and_validate(model,
     for epoch in range(1, EPOCHS + 1):
 
         # ===== Training HERE =====
-        train_loss = train(epoch, train_loader, model,
-                           loss_function, optimizer, cnn=cnn)
+        train_loss, train_acc = train(epoch, train_loader, model,
+                                      loss_function, optimizer, cnn=cnn)
         # Store statistics for later usage
         all_train_loss.append(train_loss)
+        all_accuracy_training.append(train_acc)
 
         # ====== VALIDATION HERE ======
         if epoch % CROSS_VALIDATION_EPOCHS == 0:
@@ -76,25 +80,33 @@ def train_and_validate(model,
         # If enabled do everything needed
         STOP = True
         # Check last 4 validations
-        for i in range(1, 4):
+        for i in range(1, 3):
             # If at least one val_loss_new < val_loss_older dont stop
             if all_valid_loss[-i] < all_valid_loss[-i-1]:
                 STOP = False
                 break
+        # Small change in loss
+        if (abs(all_valid_loss[-1] - all_valid_loss[-2]) < 0.01 and
+                abs(all_valid_loss[-2] - all_valid_loss[-3]) < 0.01):
+            STOP = False
+            break
+
         # Actually do early stopping
         if STOP is True:
             # Reset last model
             print('Resetting to previous model! ..\n')
-            best_model = models[-3].to(device)
+            best_model = models[-2].to(device)
             break
 
-    return best_model, all_train_loss, all_valid_loss, epoch
+    return best_model, all_train_loss, all_valid_loss, all_accuracy_training, epoch
 
 
 def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
     # Set model to train mode
     model.train()
     training_loss = 0.0
+    correct = 0
+    total = 0
 
     # obtain the model's device ID
     device = next(model.parameters()).device
@@ -106,7 +118,7 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
         inputs, labels, lengths = batch
 
         inputs = inputs.to(device)
-        labels = labels.to(device)
+        labels = labels.type('torch.LongTensor').to(device)
 
         # Clear gradients
         optimizer.zero_grad()
@@ -120,9 +132,17 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
             inputs = inputs[:, np.newaxis, :, :]
             y_preds = model.forward(inputs)
 
+        # print(f'\ny_preds={y_preds}')
+        # print(f'\nlabels={labels}')
         # Compute loss: L = loss_function(y', y)
         loss = loss_function(y_preds, labels)
 
+        labels_cpu = labels.detach().clone().to('cpu').numpy()
+        # Get accuracy
+        correct += sum([int(a == b)
+                        for a, b in zip(labels_cpu,
+                                        np.argmax(y_preds.detach().clone().to('cpu').numpy(), axis=1))])
+        total += len(labels_cpu)
         # Backward pass: compute gradient wrt model parameters
         loss.backward()
 
@@ -139,8 +159,19 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
                  batch_size=dataloader.batch_size,
                  dataset_size=len(dataloader.dataset))
 
-    # Return loss
-    return training_loss / len(dataloader)
+    # print statistics
+    progress(loss=training_loss/len(dataloader),
+             epoch=_epoch,
+             batch=index,
+             batch_size=dataloader.batch_size,
+             dataset_size=len(dataloader.dataset))
+
+    accuracy = correct/total * 100
+    # Print some stats
+    # print(
+    #     f'\nTrain loss at epoch {_epoch} : {round(training_loss/len(dataloader), 4)}')
+    # Return loss, accuracy
+    return training_loss / len(dataloader), accuracy
 
 
 def validate(_epoch, dataloader, model, loss_function, cnn=False):
@@ -161,7 +192,7 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
             inputs, labels, lengths = batch
             # Transfer to device
             inputs = inputs.to(device)
-            labels = labels.to(device)
+            labels = labels.type('torch.LongTensor').to(device)
 
             # Forward through the network
             if cnn is False:
@@ -202,7 +233,8 @@ def test(model, dataloader, cnn=False):
 
         # Transfer to device
         inputs = inputs.to(device)
-        labels = labels.to(device)
+        labels = labels.type('torch.LongTensor').to(device)
+        # print(f'\n labels: {labels}')
 
         # Forward through the network
         if cnn is False:
@@ -212,8 +244,10 @@ def test(model, dataloader, cnn=False):
             inputs = inputs[:, np.newaxis, :, :]
             out = model.forward(inputs)
         # Predict the one with the maximum probability
-        predictions = F.softmax(out, dim=-1).argmax(dim=-1)
-
+        # predictions = F.softmax(out, dim=-1).argmax(dim=-1)
+        # print(f'\nout:{out}')
+        predictions = torch.argmax(out, -1)
+        # print(f'\nprediction: {predictions}')
         # Save predictions
         y_pred.append(predictions.cpu().data.numpy())
         y_true.append(labels.cpu().data.numpy())
@@ -225,35 +259,15 @@ def test(model, dataloader, cnn=False):
     return y_pred, y_true
 
 
-def results(model, train_loss, valid_loss, y_pred, y_true, epochs, cv=5):
+def results(model, optimizer, loss_function, train_loss, valid_loss, train_accuracy, y_pred, y_true, epochs, timestamp, cv=5):
     """Prints the results of training. Also saves some plots."""
     # Plots
-    fig = plt.figure(figsize=(10, 10))
-    plt.ylabel('Train - Validation Loss')
-    plt.xlabel('Epoch')
+
+    # Train validation plot
     try:
-        plt.plot(list(range(1, epochs + 1)), train_loss, color='r')
-        valid_loss_for_plot = np.array([[l]*cv for l in valid_loss]).flatten()
-        plt.plot(list(range(1, epochs + 1)), valid_loss_for_plot, color='b')
-        plt.savefig(
-            f'plotting/plots/{model.__class__.__name__}_train_valid_loss.png')
-    except Exception as e:
-        print('\Exception raised while creating plot: {e}')
-
-    # Print metrics
-    f1_metric = f1_score(y_true, y_pred, average='macro')
-    print(f'f1 score: {round(f1_metric,4)}')
-    acc = accuracy_score(y_true, y_pred)
-    print(f'Accuracy: {round(acc,4)}')
-
-
-def results(model, train_loss, valid_loss, y_pred, y_true, epochs, timestamp, cv=5):
-    """Prints the results of training. Also saves some plots."""
-    # Plots
-    fig = plt.figure(figsize=(10, 10))
-    plt.ylabel('Train - Validation Loss')
-    plt.xlabel('Epoch')
-    try:
+        fig = plt.figure(figsize=(10, 10))
+        plt.ylabel('Train - Validation Loss')
+        plt.xlabel('Epoch')
         plt.plot(list(range(1, epochs + 1)), train_loss,
                  color='r', label='Training')
         vld_values = np.array([[l]*cv for l in valid_loss]).flatten()
@@ -265,13 +279,30 @@ def results(model, train_loss, valid_loss, y_pred, y_true, epochs, timestamp, cv
                  color='b', label='Validation')
         plt.legend()
         plot_filename = f'train_valid_loss_{model.__class__.__name__}_{epochs}_{timestamp}.png'
-        plt.savefig(
-            f'plotting/plots/{plot_filename}')
+        plt.savefig(os.path.join(PLOTS_FOLDER, plot_filename))
     except Exception as e:
         print(f'Exception raised while creating plot: {e}')
     finally:
         # Just in case plotting fails. We need the name below
         plot_filename = f'train_valid_loss_{model.__class__.__name__}_{epochs}_{timestamp}.png'
+
+    #  Accuracy plot
+    try:
+        plt.figure(figsize=(10, 10))
+        plt.plot(list(range(1, epochs + 1)), train_accuracy,
+                 color='r', label='Accuracy')
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy')
+        plt.title('Training Accuracy')
+        plt.legend()
+        accuracy_filename = f'accuracy_{model.__class__.__name__}_{epochs}_{timestamp}.png'
+        plt.savefig(os.path.join(PLOTS_FOLDER, accuracy_filename))
+
+    except Exception as e:
+        print(f'Exception raised while creating plot: {e}')
+    finally:
+        # Just in case plotting fails. We need the name below
+        accuracy_filename = f'accuracy_{model.__class__.__name__}_{epochs}_{timestamp}.png'
 
     # Print metrics
     f1_metric = f1_score(y_true, y_pred, average='macro')
@@ -289,16 +320,34 @@ def results(model, train_loss, valid_loss, y_pred, y_true, epochs, timestamp, cv
         y_true=y_true, y_pred=y_pred, target_names=classes)
     # Save metrics
     filename = f'{model.__class__.__name__}_{epochs}_{timestamp}.md'
-    with open(f'plotting/reports/{filename}', mode='w') as f:
+    with open(os.path.join(REPORTS_FOLDER, filename), mode='w') as f:
         data = f"""
 # REPORT:
-### {filename}
+# {filename}
+## Model details:
+```python
+{model}
+```
+## Optimizer
+```python
+{optimizer}
+```
+## Loss function
+```python
+{loss_function}
+```
+## Metrics:
 f1-macro-score = {f1_metric}
 acc = {acc}
+## Classification Report:
 ```
 {model_classification_report}
 ```
+## Training / Validation Loss
 <img src='../plots/{plot_filename}'>
+## Training Accuracy
+<img src='../plots/{accuracy_filename}'>
+## Confusion matrix
 <img src='../plots/{cnf_mtrx_filename}'>
     """
         f.write(data)
@@ -322,3 +371,40 @@ def progress(loss, epoch, batch, batch_size, dataset_size):
 
     if batch == batches:
         print()
+
+
+def overfit(model,
+            train_loader,
+            loss_function,
+            optimizer,
+            epochs,
+            cnn=False):
+    """
+    Trains the given <model>.
+    Then validates every <cross_validation_epochs>.
+    Returns: <best_model> containing the model with best parameters.
+    """
+
+    # obtain the model's device ID
+    device = next(model.parameters()).device
+
+    print(next(iter(train_loader)))
+
+    EPOCHS = epochs
+
+    # Store losses, models
+    all_train_loss = []
+    models = []
+
+    # Iterate for EPOCHS
+    for epoch in range(1, EPOCHS + 1):
+
+        # ===== Training HERE =====
+        train_loss = train(epoch, train_loader, model,
+                           loss_function, optimizer, cnn=cnn)
+        # Store statistics for later usage
+        all_train_loss.append(train_loss)
+        if epoch % 5 == 0:
+            print(f'\nEpoch {epoch} loss: {train_loss}')
+
+    return model, all_train_loss, epoch

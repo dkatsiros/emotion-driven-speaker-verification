@@ -19,7 +19,8 @@ class EmodbDataset(Dataset):
             feature_extraction_method {string} -- [What method extracts the features]
             oversampling {bool} -- [Resampling technique to be applied]
         """
-        self.max_length = 281
+        self.feature_extraction_method = feature_extraction_method
+
         if oversampling is True:
             ros = RandomOverSampler()
             # Expand last dimension
@@ -56,6 +57,7 @@ class EmodbDataset(Dataset):
         # Get all lengths before zero padding
         lengths = np.array([len(x) for x in X])
         self.lengths = torch.tensor(lengths)
+
         # Zero pad all samples
         X = self.zero_pad_and_stack(X)
         # Create tensor for features
@@ -81,15 +83,20 @@ class EmodbDataset(Dataset):
         # print(self.X[index].size(), self.y[index].size(), self.lengths[index].size())
         return self.X[index], self.y[index], self.lengths[index]
 
-    def zero_pad_and_stack(self, X):
+    def zero_pad_and_stack(self, X,):
         """
         This function performs zero padding on a list of features and forms them into a numpy 3D array
 
         Returns:
             padded: a 3D numpy array of shape num_sequences x max_sequence_length x feature_dimension
         """
+        if self.feature_extraction_method == "MFCC":
+            max_length = self.lengths.max()
+        elif self.feature_extraction_method == "MEL_SPECTROGRAM":
+            max_length = 281  # self.lengths.max()
+        else:
+            raise AssertionError()
 
-        max_length = self.max_length  # self.lengths.max()
         feature_dim = X[0].shape[-1]
         padded = np.zeros((len(X), max_length, feature_dim))
 
