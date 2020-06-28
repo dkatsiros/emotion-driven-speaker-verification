@@ -38,13 +38,15 @@ def train_and_validate(model,
 
     EPOCHS = epochs
     CROSS_VALIDATION_EPOCHS = cross_validation_epochs
-    best_model = model
 
     # Store losses, models
     all_accuracy_training = []
+    all_accuracy_validation = []
     all_train_loss = []
     all_valid_loss = []
-    models = []
+    best_model = None
+    best_model_epoch = 0
+    min_loss = 0
 
     # Iterate for EPOCHS
     for epoch in range(1, EPOCHS + 1):
@@ -58,47 +60,59 @@ def train_and_validate(model,
 
         # ====== VALIDATION HERE ======
         if epoch % CROSS_VALIDATION_EPOCHS == 0:
-            valid_loss = validate(epoch, valid_loader,
-                                  model, loss_function, cnn=cnn)
-            # Store model but on cpu
-            models.append(deepcopy(model).to('cpu'))
-            # Remove first model when adding one new if len(models)>5
-            if len(models) == 6:
-                models = models[1:-1]
+            valid_loss, valid_acc = validate(epoch, valid_loader,
+                                             model, loss_function, cnn=cnn)
+
+            # Find best model
+            if best_model is None:
+                # Initialize
+                # Store model but on cpu
+                best_model = deepcopy(model).to('cpu')
+                best_model_epoch = 5
+                # Save new minimum
+                min_loss = valid_loss
+            # New model with lower loss
+            elif valid_loss < min_loss:
+                # Update loss
+                min_loss = valid_loss
+                # Update best model, store on cpu
+                best_model = deepcopy(model).to('cpu')
+                best_model_epoch = epoch
+
             # Store statistics for later usage
             all_valid_loss.append(valid_loss)
+            all_accuracy_validation.append(valid_acc)
 
         # Make sure enough epochs have passed
         if epoch < 4 * CROSS_VALIDATION_EPOCHS:
             continue
-
-        best_model = model
 
         # Early stopping enabled?
         if early_stopping is False:
             continue
         # If enabled do everything needed
         STOP = True
-        # Check last 4 validations
-        for i in range(1, 3):
-            # If at least one val_loss_new < val_loss_older dont stop
-            if all_valid_loss[-i] < all_valid_loss[-i-1]:
-                STOP = False
-                break
+
+        # If validation loss is ascending two times in a row exit training
+        if (all_valid_loss[-1] >= all_valid_loss[-2]) and (all_valid_loss[-2] >= all_valid_loss[-3]):
+            print(f'\nIncreasing loss..')
+            print(f'\nResetting model to epoch {best_model_epoch}.')
+            best_model = best_model.to(device)
+            # Exit 2 loops at the same time, go to testing
+            return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
+
         # Small change in loss
-        if (abs(all_valid_loss[-1] - all_valid_loss[-2]) < 0.01 and
-                abs(all_valid_loss[-2] - all_valid_loss[-3]) < 0.01):
-            STOP = False
-            break
+        if (abs(all_valid_loss[-1] - all_valid_loss[-2]) < 1e-3 and
+                abs(all_valid_loss[-2] - all_valid_loss[-3]) < 1e-3):
+            print(f'\nVery small change in loss..')
+            print(f'\nResetting model to epoch {best_model_epoch}.')
+            best_model = best_model.to(device)
+            # Exit 2 loops at the same time, go to testing
+            return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
 
-        # Actually do early stopping
-        if STOP is True:
-            # Reset last model
-            print('Resetting to previous model! ..\n')
-            best_model = models[-2].to(device)
-            break
-
-    return best_model, all_train_loss, all_valid_loss, all_accuracy_training, epoch
+    print(f'\nTraining exited normally at epoch {epoch}.')
+    best_model = best_model.to(device)
+    return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
 
 
 def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
@@ -117,6 +131,9 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
         # Split the contents of each batch[i]
         inputs, labels, lengths = batch
 
+        # Total number of samples
+        total += len(inputs)
+
         inputs = inputs.to(device)
         labels = labels.type('torch.LongTensor').to(device)
 
@@ -125,24 +142,23 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
 
         # Forward pass: y' = model(x)
         if cnn is False:
-            y_preds = model.forward(inputs, lengths)
+            y_pred = model.forward(inputs, lengths)
         else:
             # We got a CNN
             # Add a new axis for CNN filter features, [z-axis]
             inputs = inputs[:, np.newaxis, :, :]
-            y_preds = model.forward(inputs)
+            y_pred = model.forward(inputs)
 
         # print(f'\ny_preds={y_preds}')
         # print(f'\nlabels={labels}')
         # Compute loss: L = loss_function(y', y)
-        loss = loss_function(y_preds, labels)
+        loss = loss_function(y_pred, labels)
 
         labels_cpu = labels.detach().clone().to('cpu').numpy()
         # Get accuracy
         correct += sum([int(a == b)
                         for a, b in zip(labels_cpu,
-                                        np.argmax(y_preds.detach().clone().to('cpu').numpy(), axis=1))])
-        total += len(labels_cpu)
+                                        np.argmax(y_pred.detach().clone().to('cpu').numpy(), axis=1))])
         # Backward pass: compute gradient wrt model parameters
         loss.backward()
 
@@ -160,7 +176,7 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
                  dataset_size=len(dataloader.dataset))
 
     # print statistics
-    progress(loss=training_loss/len(dataloader),
+    progress(loss=training_loss/total,
              epoch=_epoch,
              batch=index,
              batch_size=dataloader.batch_size,
@@ -171,7 +187,7 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
     # print(
     #     f'\nTrain loss at epoch {_epoch} : {round(training_loss/len(dataloader), 4)}')
     # Return loss, accuracy
-    return training_loss / len(dataloader), accuracy
+    return training_loss / total, accuracy
 
 
 def validate(_epoch, dataloader, model, loss_function, cnn=False):
@@ -179,6 +195,9 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
 
     # Put model to evalutation mode
     model.eval()
+
+    correct = 0
+    total = 0
 
     # obtain the model's device ID
     device = next(model.parameters()).device
@@ -190,6 +209,10 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
 
             # Get the sample
             inputs, labels, lengths = batch
+
+            # Total number of samples
+            total += len(inputs)
+
             # Transfer to device
             inputs = inputs.to(device)
             labels = labels.type('torch.LongTensor').to(device)
@@ -203,6 +226,12 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
                 inputs = inputs[:, np.newaxis, :, :]
                 y_pred = model.forward(inputs)
 
+            labels_cpu = labels.detach().clone().to('cpu').numpy()
+            # Get accuracy
+            correct += sum([int(a == b)
+                            for a, b in zip(labels_cpu,
+                                            np.argmax(y_pred.detach().clone().to('cpu').numpy(), axis=1))])
+
             # Compute loss
             loss = loss_function(y_pred, labels)
 
@@ -210,9 +239,12 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
             valid_loss += loss.data.item()
 
         # Print some stats
-        print(f'\nValidation loss at epoch {_epoch} : {round(valid_loss, 4)}')
+        print(
+            f'\nValidation loss at epoch {_epoch} : {round(valid_loss/total, 4)}')
 
-    return valid_loss / len(dataloader)
+        accuracy = correct / total * 100
+
+    return valid_loss / total, accuracy
 
 
 def test(model, dataloader, cnn=False):
@@ -259,7 +291,11 @@ def test(model, dataloader, cnn=False):
     return y_pred, y_true
 
 
-def results(model, optimizer, loss_function, train_loss, valid_loss, train_accuracy, y_pred, y_true, epochs, timestamp, cv=5):
+def results(model, optimizer, loss_function,
+            train_loss, valid_loss,
+            train_accuracy, valid_accuracy,
+            y_pred, y_true,
+            epochs, timestamp, cv=5):
     """Prints the results of training. Also saves some plots."""
     # Plots
 
@@ -290,10 +326,17 @@ def results(model, optimizer, loss_function, train_loss, valid_loss, train_accur
     try:
         plt.figure(figsize=(10, 10))
         plt.plot(list(range(1, epochs + 1)), train_accuracy,
-                 color='r', label='Accuracy')
+                 color='r', label='Training')
+        vld_acc_values = np.array([[l]*cv for l in valid_accuracy]).flatten()
+        # Add some missing values below
+        vld_acc_values = np.concatenate(
+            (vld_acc_values, np.array([valid_accuracy[-1]]*(epochs % cv))))
+
+        plt.plot(list(range(1, epochs + 1)), vld_acc_values,
+                 color='b', label='Validation')
         plt.xlabel('Epochs')
         plt.ylabel('Accuracy')
-        plt.title('Training Accuracy')
+        plt.title('Training Validation Accuracy')
         plt.legend()
         accuracy_filename = f'accuracy_{model.__class__.__name__}_{epochs}_{timestamp}.png'
         plt.savefig(os.path.join(PLOTS_FOLDER, accuracy_filename))
@@ -337,10 +380,10 @@ def results(model, optimizer, loss_function, train_loss, valid_loss, train_accur
 {loss_function}
 ```
 ## Metrics:
-f1-macro-score = {f1_metric}
-acc = {acc}
+f1-macro-score = {round(f1_metric,4)}
+acc = {round(acc,4)}
 ## Classification Report:
-```
+```python
 {model_classification_report}
 ```
 ## Training / Validation Loss
