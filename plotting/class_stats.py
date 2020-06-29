@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 from utils.emodb import idx2emotion
 from config import PLOTS_FOLDER
+import numpy as np
 
 
 def class_statistics(categories=None, save=True, filename='class_stats.png'):
@@ -66,3 +67,24 @@ def dataloader_stats(dataloader, filename='dataloader_statistics.png'):
     # Save figure
     file = os.path.join(PLOTS_FOLDER, filename)
     plt.savefig(file)
+
+
+def samples_lengths(dataloaders=[], dataset_name='emodb'):
+    """Create a diagram with len of time series for the dataset."""
+    total_samples = sum([len(dtld.dataset) for dtld in dataloaders])
+    lengths = np.empty(total_samples, dtype=int)
+    idx = 0
+    for dataloader in dataloaders:
+        for _, _, length_tensor in dataloader:
+            lengths[idx:idx+len(length_tensor)
+                    ] = length_tensor.to('cpu').numpy()
+            idx += len(length_tensor)
+    plt.figure(figsize=(20, 10))
+    step = 10
+    lengths = np.sort(lengths, kind='heapsort')
+    print('compute')
+    bins = list(range(0, (np.max(lengths)//step + 1) * step, step))
+    plt.hist(x=lengths, bins=bins, edgecolor='k')
+    print('hist done')
+    plt.xticks(bins)
+    plt.savefig(f'./{dataset_name}_lengths_distribution.png')

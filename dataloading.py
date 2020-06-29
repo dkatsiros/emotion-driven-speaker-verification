@@ -92,20 +92,53 @@ class EmodbDataset(Dataset):
         """
         if self.feature_extraction_method == "MFCC":
             max_length = self.lengths.max()
+
+            feature_dim = X[0].shape[-1]
+            padded = np.zeros((len(X), max_length, feature_dim))
+
+            # Do the actual work
+            for i in range(len(X)):
+                if X[i].shape[0] < max_length:
+                    # Needs padding
+                    diff = max_length - X[i].shape[0]
+                    # pad
+                    X[i] = np.vstack((X[i], np.zeros((diff, feature_dim))))
+                padded[i, :, :] = X[i]
+            return padded
+
         elif self.feature_extraction_method == "MEL_SPECTROGRAM":
             max_length = 281  # self.lengths.max()
+
+            feature_dim = X[0].shape[-1]
+            padded = np.zeros((len(X), max_length, feature_dim))
+
+            # Do the actual work
+            for i in range(len(X)):
+                if X[i].shape[0] < max_length:
+                    # Needs padding
+                    diff = max_length - X[i].shape[0]
+                    # pad
+                    X[i] = np.vstack((X[i], np.zeros((diff, feature_dim))))
+                padded[i, :, :] = X[i]
+            return padded
+
+        elif self.feature_extraction_method == "MEL_SPECTROGRAM":
+            max_length = 130
+            # max_length = 281  # self.lengths.max()
+
+            feature_dim = X[0].shape[-1]
+            padded = np.zeros((len(X), max_length, feature_dim))
+
+            # trim long duration audio files to a fixed duration
+            for i in range(min(max_length, len(X))):
+                if X[i].shape[0] < max_length:
+                    # Needs padding
+                    diff = max_length - X[i].shape[0]
+                    # pad
+                    X[i] = np.vstack((X[i], np.zeros((diff, feature_dim))))
+                for j in range(max_length):
+                    padded[i, j, :] = X[i][j]
+            return padded
+
         else:
             raise AssertionError()
-
-        feature_dim = X[0].shape[-1]
-        padded = np.zeros((len(X), max_length, feature_dim))
-
-        # Do the actual work
-        for i in range(len(X)):
-            if X[i].shape[0] < max_length:
-                # Needs padding
-                diff = max_length - X[i].shape[0]
-                # pad
-                X[i] = np.vstack((X[i], np.zeros((diff, feature_dim))))
-            padded[i, :, :] = X[i]
-        return padded
