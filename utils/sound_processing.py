@@ -60,7 +60,7 @@ def get_melspectrogram(loaded_wav=None):
 
     # Get spectrogram
     spectrogram = librosa.feature.melspectrogram(
-        y=loaded_wav, sr=SAMPLING_RATE)  # , hop_length=HOP_LENGTH, n_fft=2048)
+        y=loaded_wav, sr=SAMPLING_RATE)  # , n_mels=128, hop_length=HOP_LENGTH, n_fft=2048)
     # Convert to MEL-Scale
     spectrogram_dB = librosa.power_to_db(spectrogram, ref=np.max)  # (n_mel,t)
     # Transpose to return (time,n_mel)

@@ -149,7 +149,7 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
             inputs = inputs[:, np.newaxis, :, :]
             y_pred = model.forward(inputs)
 
-        # print(f'\ny_preds={y_preds}')
+        # print(f'\ny_preds={y_pred}')
         # print(f'\nlabels={labels}')
         # Compute loss: L = loss_function(y', y)
         loss = loss_function(y_pred, labels)

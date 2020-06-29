@@ -10,13 +10,14 @@ from torch.nn import functional as F
 
 from models.lstm import LSTM
 from models.cnn import CNN
+from models.cnn2 import CNN2
 from training import train_and_validate, test, results, overfit
 # progress, fit, print_results
 from config import VARIABLES_FOLDER, RECOMPUTE
 import os
 import joblib
 
-from plotting.class_stats import dataloader_stats
+from plotting.class_stats import dataloader_stats, samples_lengths
 
 # Split dataset to arrays
 X_train, y_train, X_test, y_test, X_eval, y_eval = load_Emodb()
@@ -26,11 +27,12 @@ BATCH_SIZE = 16  # len(X_train) // 20
 print(f'Selected Batch Size: {BATCH_SIZE}')
 EPOCHS = 500
 
-CNN_BOOLEAN = False
+CNN_BOOLEAN = True
 
 # Load sets using dataset class
 train_set = EmodbDataset(X_train, y_train, oversampling=True,
                          feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
+
 test_set = EmodbDataset(
     X_test, y_test, feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
 eval_set = EmodbDataset(
@@ -71,15 +73,18 @@ except:
     joblib.dump(valid_loader, VALID_LOADER)
     dataloader_stats(valid_loader, filename='valid_loader_statistics.png')
 
+# Print sequence length diagram for samples
+# samples_lengths(dataloaders=[train_loader, valid_loader])
+
 # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'Running on: {device}.\n')
 
 # Create a model
-model = LSTM(input_size=39, hidden_size=6, output_size=7, num_layers=3,
-             bidirectional=True, dropout=0.2)
+# model = LSTM(input_size=39, hidden_size=6, output_size=7, num_layers=3,
+#              bidirectional=True, dropout=0.2)
 
-# model = CNN(output_dim=7)
+model = CNN2(output_dim=7)
 print(f'Model Parameters: {model.count_parameters(model)}')
 
 # move model weights to device
