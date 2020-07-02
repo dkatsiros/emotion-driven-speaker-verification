@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 from imblearn.over_sampling import SMOTE
 from utils import emodb
+from utils import iemocap
 
 
 def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True):
@@ -68,7 +69,6 @@ def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True):
 
 def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True):
     """Return X_train, y_train, X_test, y_test of EMODB dataset."""
-
     # Get percentages
     test_p, val_p = test_val
 
@@ -82,18 +82,26 @@ def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True):
         raise FileNotFoundError
 
     # Get all sessions
-    SESSIONS = glob.glob(''.join([DATASET, 'Session*']))
-
-    # Get filenames
-    dataset_filenames = []
-    for session in SESSIONS:
-        folder = os.path.join(SESSIONS, 'sentence/wav/')
-        dataset_filenames += glob.glob(''.join([folder, '*.wav']))
-
-    dataset_files_raw = []
-    dataset_files_raw = [x for x in glob.iglob(''.join([DATASET, '*.wav']))]
-    dataset_labels_raw = [emodb.get_file_details(
-        file)[2] for file in dataset_files_raw]
+    sessions = glob.glob(''.join([DATASET, 'Session*']))
+    filenames = []
+    labels = []
+    for session in sessions:
+        print(session)
+        evaluation_folder = os.path.join(session, 'dialog/EmoEvaluation/')
+        # Get a list with all evaluation files
+        evaluation_files = glob.glob(''.join([evaluation_folder, '*.txt']))
+        # Each file contains the name of the wavs as well
+        # as the label of each wav
+        for eval_file in evaluation_files:
+            filenames_, labels_ = iemocap.read_evaluation_file(
+                eval_file=eval_file)
+            labels += labels_
+            for f in filenames_:
+                f_path = os.path.join(session, 'sentences', 'wav',
+                                      eval_file.split(
+                                          '/')[-1].replace('.txt', ''),
+                                      f)
+                filenames.append(''.join([f_path, '.wav']))
 
     # Initialize
     X_train_, y_train_ = [], []
@@ -103,15 +111,15 @@ def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True):
     # First split
     sss = StratifiedShuffleSplit(n_splits=1, test_size=test_p)
     train_idx, test_idx = next(
-        sss.split(dataset_files_raw, dataset_labels_raw))
+        sss.split(filenames, labels))
     # Train
     for idx in train_idx:
-        X_train_.append(dataset_files_raw[idx])
-        y_train_.append(dataset_labels_raw[idx])
+        X_train_.append(filenames[idx])
+        y_train_.append(labels[idx])
     # Test
     for idx in test_idx:
-        X_test.append(dataset_files_raw[idx])
-        y_test.append(dataset_labels_raw[idx])
+        X_test.append(filenames[idx])
+        y_test.append(labels[idx])
 
     # Before training oversample
     # if oversampling is True:
