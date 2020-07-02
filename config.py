@@ -14,6 +14,7 @@ DATASET_FOLDER = "emodb/wav/"
 
 # Stored variables
 VARIABLES_FOLDER = "variables/"
+DETERMINISTIC = True
 RECOMPUTE = True
 
 # Sampling process

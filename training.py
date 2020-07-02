@@ -12,6 +12,7 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from utils.emodb import get_classes
 from sklearn.metrics import f1_score, accuracy_score
+from inspect import getsource
 from plotting.metrics import plot_confusion_matrix
 from config import PLOTS_FOLDER, REPORTS_FOLDER
 
@@ -97,6 +98,8 @@ def train_and_validate(model,
         if (all_valid_loss[-1] >= all_valid_loss[-2]) and (all_valid_loss[-2] >= all_valid_loss[-3]):
             print(f'\nIncreasing loss..')
             print(f'\nResetting model to epoch {best_model_epoch}.')
+            # Remove unnessesary model
+            model.to('cpu')
             best_model = best_model.to(device)
             # Exit 2 loops at the same time, go to testing
             return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
@@ -106,11 +109,15 @@ def train_and_validate(model,
                 abs(all_valid_loss[-2] - all_valid_loss[-3]) < 1e-3):
             print(f'\nVery small change in loss..')
             print(f'\nResetting model to epoch {best_model_epoch}.')
+            # Remove unnessesary model
+            model.to('cpu')
             best_model = best_model.to(device)
             # Exit 2 loops at the same time, go to testing
             return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
 
     print(f'\nTraining exited normally at epoch {epoch}.')
+    # Remove unnessesary model
+    model.to('cpu')
     best_model = best_model.to(device)
     return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
 
@@ -120,7 +127,6 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
     model.train()
     training_loss = 0.0
     correct = 0
-    total = 0
 
     # obtain the model's device ID
     device = next(model.parameters()).device
@@ -130,9 +136,6 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
 
         # Split the contents of each batch[i]
         inputs, labels, lengths = batch
-
-        # Total number of samples
-        total += len(inputs)
 
         inputs = inputs.to(device)
         labels = labels.type('torch.LongTensor').to(device)
@@ -176,18 +179,18 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
                  dataset_size=len(dataloader.dataset))
 
     # print statistics
-    progress(loss=training_loss/total,
+    progress(loss=training_loss / len(dataloader.dataset),
              epoch=_epoch,
              batch=index,
              batch_size=dataloader.batch_size,
              dataset_size=len(dataloader.dataset))
 
-    accuracy = correct/total * 100
+    accuracy = correct/len(dataloader.dataset) * 100
     # Print some stats
     # print(
     #     f'\nTrain loss at epoch {_epoch} : {round(training_loss/len(dataloader), 4)}')
     # Return loss, accuracy
-    return training_loss / total, accuracy
+    return training_loss / len(dataloader.dataset), accuracy
 
 
 def validate(_epoch, dataloader, model, loss_function, cnn=False):
@@ -197,7 +200,6 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
     model.eval()
 
     correct = 0
-    total = 0
 
     # obtain the model's device ID
     device = next(model.parameters()).device
@@ -209,9 +211,6 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
 
             # Get the sample
             inputs, labels, lengths = batch
-
-            # Total number of samples
-            total += len(inputs)
 
             # Transfer to device
             inputs = inputs.to(device)
@@ -240,11 +239,11 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
 
         # Print some stats
         print(
-            f'\nValidation loss at epoch {_epoch} : {round(valid_loss/total, 4)}')
+            f'\nValidation loss at epoch {_epoch} : {round(valid_loss/len(dataloader.dataset), 4)}')
 
-        accuracy = correct / total * 100
+        accuracy = correct / len(dataloader.dataset) * 100
 
-    return valid_loss / total, accuracy
+    return valid_loss / len(dataloader.dataset), accuracy
 
 
 def test(model, dataloader, cnn=False):
@@ -361,6 +360,9 @@ def results(model, optimizer, loss_function,
                           filename=cnf_mtrx_filename)
     model_classification_report = classification_report(
         y_true=y_true, y_pred=y_pred, target_names=classes)
+
+    # Raw model
+    forward_raw = getsource(model.forward)
     # Save metrics
     filename = f'{model.__class__.__name__}_{epochs}_{timestamp}.md'
     with open(os.path.join(REPORTS_FOLDER, filename), mode='w') as f:
@@ -392,6 +394,10 @@ acc = {round(acc,4)}
 <img src='../plots/{accuracy_filename}'>
 ## Confusion matrix
 <img src='../plots/{cnf_mtrx_filename}'>
+## Forward
+```python
+{forward_raw}
+```
     """
         f.write(data)
 

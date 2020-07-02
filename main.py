@@ -11,13 +11,27 @@ from torch.nn import functional as F
 from models.lstm import LSTM
 from models.cnn import CNN
 from models.cnn2 import CNN2
+from models.cnn3 import CNN3
 from training import train_and_validate, test, results, overfit
 # progress, fit, print_results
-from config import VARIABLES_FOLDER, RECOMPUTE
+from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
 import os
 import joblib
-
+import random
 from plotting.class_stats import dataloader_stats, samples_lengths
+
+
+# Deterministic ?
+if DETERMINISTIC is True:
+    np.random.seed(0)
+    random.seed(0)
+    torch.manual_seed(0)
+    torch.cuda.manual_seed(0)
+    torch.cuda.manual_seed_all(0)
+    torch.backends.cudnn.enabled = False
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
 
 # Split dataset to arrays
 X_train, y_train, X_test, y_test, X_eval, y_eval = load_Emodb()
@@ -84,7 +98,7 @@ print(f'Running on: {device}.\n')
 # model = LSTM(input_size=39, hidden_size=6, output_size=7, num_layers=3,
 #              bidirectional=True, dropout=0.2)
 
-model = CNN2(output_dim=7)
+model = CNN3(output_dim=7)
 print(f'Model Parameters: {model.count_parameters(model)}')
 
 # move model weights to device
@@ -106,7 +120,8 @@ loss_function = torch.nn.CrossEntropyLoss()
 #     model.parameters(), rho=0.9, weight_decay=L2)  # eps = 1e-06
 # optimizer = torch.optim.SGD(params=model.parameters(
 # ), lr=learning_rate, momentum=0.9, weight_decay=L2)
-optimizer = torch.optim.Adam(model.parameters())
+# optimizer = torch.optim.Adam(model.parameters(), weight_decay=L2)
+optimizer = torch.optim.AdamW(model.parameters(), weight_decay=0.02)
 CROSS_VALIDATION_EPOCHS = 5
 
 # Test overfit

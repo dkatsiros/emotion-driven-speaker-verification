@@ -46,26 +46,21 @@ class CNN2(nn.Module):
         # input: (batch_size,1,max_seq,features)
         # Each layer applies the following matrix tranformation
         # recursively: (batch_size,conv_output,max_seq/2 -1,features/2 -1)
-        # print('Original x:', np.shape(x))
+
         x = F.max_pool2d(F.leaky_relu(self.conv1_bn(self.conv1(x))),
                          2)  # [14, 10, 119, 63]
-        # print('Conv1:', np.shape(x))
         x = F.max_pool2d(F.leaky_relu(self.conv2_bn(self.conv2(x))),
                          2)  # [14, 20, 58, 30]
-        # print('Conv2:', np.shape(x))
 
         x = self.dropout1(x)  # [14, 20, 58, 30]
-        # print('Dropout1:', np.shape(x))
         x = F.max_pool2d(F.leaky_relu(self.conv3_bn(self.conv3(x))),
                          2)  # [14, 40, 28, 14]
-        # print('Conv3:', np.shape(x))
 
         x = F.max_pool2d(F.leaky_relu(self.conv4_bn(self.conv4(x))),
                          2)  # [14, 80, 13, 6]
 
         x = F.max_pool2d(F.leaky_relu(self.conv5_bn(self.conv5(x))),
                          2)  # [14,160,5,2]
-        # print('Conv4:', np.shape(x))
 
         # batch_size x new_dim(ginomeno ton allon)
         x = self.dropout2(F.leaky_relu(self.fc1(x.view(len(x), - 1))))
