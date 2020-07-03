@@ -294,7 +294,8 @@ def results(model, optimizer, loss_function,
             train_loss, valid_loss,
             train_accuracy, valid_accuracy,
             y_pred, y_true,
-            epochs, timestamp, cv=5):
+            epochs, timestamp,
+            dataset, cv=5):
     """Prints the results of training. Also saves some plots."""
     # Plots
 
@@ -369,6 +370,8 @@ def results(model, optimizer, loss_function,
         data = f"""
 # REPORT:
 # {filename}
+## Dataset 
+### {dataset}
 ## Model details:
 ```python
 {model}

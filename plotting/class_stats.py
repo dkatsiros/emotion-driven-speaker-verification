@@ -40,8 +40,9 @@ def class_statistics(categories=None, save=True, filename='class_stats.png'):
     plt.savefig(file)
 
 
-def dataloader_stats(dataloader, filename='dataloader_statistics.png'):
+def dataloader_stats(dataloader, filename='dataloader_statistics.png', dataset='EMODB'):
     """Get a dataloader and check percentage of each class."""
+    from utils.emodb import idx2emotion
     # Empty counter
     cnt = {i: 0 for i in range(7)}
     for batch in dataloader:
@@ -55,7 +56,10 @@ def dataloader_stats(dataloader, filename='dataloader_statistics.png'):
     y_axis = []
 
     for label, value in cnt.items():
-        x_axis.append(idx2emotion(label))
+        if dataset == "EMODB":
+            x_axis.append(idx2emotion(label))
+        elif dataset == "IEMOCAP":
+            x_axis.append(label)
         y_axis.append(value)
 
     plt.figure(figsize=(10, 10))

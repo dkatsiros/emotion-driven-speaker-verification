@@ -68,7 +68,10 @@ def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True):
 
 
 def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_classes=9):
-    """Return X_train, y_train, X_test, y_test of EMODB dataset."""
+    """
+    Return X_train, y_train, X_test, y_test of EMODB dataset.
+    Warning: Labels are already integers.
+    """
 
     # Minor checks
     if n_classes not in list(range(1, 10)):

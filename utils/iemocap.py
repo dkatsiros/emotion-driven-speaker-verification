@@ -35,7 +35,7 @@ def read_evaluation_file(eval_file=None):
 
 
 def emotion2idx(emotion=None):
-    """Get an emotion in German and return a mapping."""
+    """Get an emotion as labeled originally and return a mapping."""
     if emotion is None:
         raise AssertionError
     mapping = {
@@ -93,3 +93,13 @@ def get_categories_population_dictionary(labels, n_classes=9):
             continue
         mapping[l] += 1
     return mapping
+
+
+def parse_wav(filename=None):
+    """Return read file using librosa."""
+    # Check file existance
+    if filename is None:
+        raise FileNotFoundError()
+    loaded_file = sound_processing.load_wav(filename=filename)
+
+    return loaded_file
