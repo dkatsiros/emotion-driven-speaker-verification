@@ -67,8 +67,13 @@ def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True):
     return X_train, y_train, X_test, y_test, X_val, y_val
 
 
-def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True):
+def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_classes=9):
     """Return X_train, y_train, X_test, y_test of EMODB dataset."""
+
+    # Minor checks
+    if n_classes not in list(range(1, 10)):
+        raise NameError(f"Wrong number of classes given {n_classes}.")
+
     # Get percentages
     test_p, val_p = test_val
 
@@ -86,7 +91,6 @@ def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True):
     filenames = []
     labels = []
     for session in sessions:
-        print(session)
         evaluation_folder = os.path.join(session, 'dialog/EmoEvaluation/')
         # Get a list with all evaluation files
         evaluation_files = glob.glob(''.join([evaluation_folder, '*.txt']))
@@ -95,13 +99,18 @@ def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True):
         for eval_file in evaluation_files:
             filenames_, labels_ = iemocap.read_evaluation_file(
                 eval_file=eval_file)
-            labels += labels_
-            for f in filenames_:
+            # labels += labels_
+            for f, l in zip(filenames_, labels_):
+                # Skip all labels > n_classes
+                if l >= n_classes:
+                    continue
+                # Label accepted
                 f_path = os.path.join(session, 'sentences', 'wav',
                                       eval_file.split(
                                           '/')[-1].replace('.txt', ''),
                                       f)
                 filenames.append(''.join([f_path, '.wav']))
+                labels.append(l)
 
     # Initialize
     X_train_, y_train_ = [], []

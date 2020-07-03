@@ -31,9 +31,7 @@ def read_evaluation_file(eval_file=None):
                 continue
             filenames.append(split[1])
             labels.append(emotion2idx(label))
-        print(len(filenames), len(labels))
         return filenames, labels
-        # wav_name =
 
 
 def emotion2idx(emotion=None):
@@ -45,20 +43,20 @@ def emotion2idx(emotion=None):
         'neu': 0,
         # Anger
         'ang': 1,
-        # Fear
-        'fea': 2,
         # Joy
-        'hap': 3,
+        'hap': 2,
         # Sadness
-        'sad': 4,
-        # Disgust
-        'dis': 5,
+        'sad': 3,
+        # Frustrated
+        'fru': 4,
+        # Excited,
+        'exc': 5,
         # Surprised
         'sur': 6,
-        # Frustrated
-        'fru': 7,
-        # Excited,
-        'exc': 8
+        # Fear
+        'fea': 7,
+        # Disgust
+        'dis': 8,
     }
     return mapping[emotion]
 
@@ -74,7 +72,24 @@ def idx2emotion(idx=None):
     return mapping[idx]
 
 
-def get_classes():
-    return ['Neutral', 'Anger', 'Fear',
-            'Happiness', 'Sadness', 'Disgust',
-            'Surprised', 'Frustrated', 'Excited']
+def get_classes(n_classes=9):
+    if n_classes == 4:
+        return ['Neutral', 'Anger', 'Happiness', 'Sadness']
+    elif n_classes == 6:
+        return ['Neutral', 'Anger', 'Happiness', 'Sadness',
+                'Frustrated', 'Excited']
+    elif n_classes == 9:
+        return ['Neutral', 'Anger', 'Happiness',
+                'Sadness', 'Frustrated', 'Excited',
+                'Surprised', 'Fear', 'Disgust']
+
+
+def get_categories_population_dictionary(labels, n_classes=9):
+    """Return a mapping (category) -> Population."""
+    mapping = {i: 0 for i in range(0, n_classes)}
+    # Iterate each file and map
+    for l in labels:
+        if l >= n_classes:
+            continue
+        mapping[l] += 1
+    return mapping
