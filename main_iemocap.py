@@ -16,7 +16,6 @@ from training import train_and_validate, test, results, overfit
 # progress, fit, print_results
 from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
 import os
-import joblib
 import random
 from plotting.class_stats import dataloader_stats, samples_lengths
 
@@ -61,38 +60,38 @@ eval_set = IemocapDataset(
 
 # PyTorch DataLoader
 try:
-    TRAIN_LOADER = os.path.join(VARIABLES_FOLDER, 'train_loader.pkl')
+    TRAIN_LOADER = os.path.join(VARIABLES_FOLDER, 'train_loader.pt')
     if RECOMPUTE is True:
         raise NameError('Forced recomputing values.')
-    train_loader = joblib.load(TRAIN_LOADER)
+    train_loader = torch.load(TRAIN_LOADER)
 except:
     train_loader = DataLoader(
         train_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-    joblib.dump(train_loader, TRAIN_LOADER)
+    torch.save(train_loader, TRAIN_LOADER)
 dataloader_stats(
     train_loader, filename='train_loader_statistics.png', dataset=DATASET)
 
 try:
-    TEST_LOADER = os.path.join(VARIABLES_FOLDER, 'test_loader.pkl')
+    TEST_LOADER = os.path.join(VARIABLES_FOLDER, 'test_loader.pt')
     if RECOMPUTE is True:
         raise NameError('Forced recomputing values.')
-    test_loader = joblib.load(TEST_LOADER)
+    test_loader = torch.load(TEST_LOADER)
 except:
     test_loader = DataLoader(
         test_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-    joblib.dump(test_loader, TEST_LOADER)
+    torch.save(test_loader, TEST_LOADER)
     dataloader_stats(
         test_loader, filename='test_loader_statistics.png', dataset=DATASET)
 
 try:
-    VALID_LOADER = os.path.join(VARIABLES_FOLDER, 'valid_loader.pkl')
+    VALID_LOADER = os.path.join(VARIABLES_FOLDER, 'valid_loader.pt')
     if RECOMPUTE is True:
         raise NameError('Forced recomputing values.')
-    valid_loader = joblib.load(VALID_LOADER)
+    valid_loader = torch.load(VALID_LOADER)
 except:
     valid_loader = DataLoader(
         eval_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-    joblib.dump(valid_loader, VALID_LOADER)
+    torch.save(valid_loader, VALID_LOADER)
     dataloader_stats(
         valid_loader, filename='valid_loader_statistics.png', dataset=DATASET)
 
@@ -154,9 +153,10 @@ best_model, train_losses, valid_losses, train_accuracy, valid_accuracy, _epochs 
 timestamp = time.ctime()
 
 modelname = os.path.join(
-    VARIABLES_FOLDER, f'{best_model.__class__.__name__}_{_epochs}_{timestamp}.pkl')
+    VARIABLES_FOLDER, f'{best_model.__class__.__name__}_{_epochs}_{timestamp}.pt')
 # Save model for later use
-joblib.dump(best_model, modelname)
+torch.save(best_model.state_dict(), modelname)
+
 # ===== TEST =====
 y_pred, y_true = test(best_model, test_loader, cnn=CNN_BOOLEAN)
 # ===== RESULTS =====
