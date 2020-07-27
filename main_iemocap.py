@@ -34,11 +34,15 @@ if DETERMINISTIC is True:
     torch.backends.cudnn.deterministic = True
 
 
+N_CLASSES = 4
+
 # Split dataset to arrays
-X_train, y_train, X_test, y_test, X_eval, y_eval = load_IEMOCAP(n_classes=4)
+[X_train, y_train,
+ X_test, y_test,
+ X_eval, y_eval] = load_IEMOCAP(n_classes=N_CLASSES)
 
 # PyTorch
-BATCH_SIZE = 8  # len(X_train) // 20
+BATCH_SIZE = 16  # len(X_train) // 20
 print(f'Selected Batch Size: {BATCH_SIZE}')
 EPOCHS = 500
 
@@ -103,7 +107,7 @@ print(f'Running on: {device}.\n')
 # model = LSTM(input_size=39, hidden_size=6, output_size=7, num_layers=3,
 #              bidirectional=True, dropout=0.2)
 
-model = CNN3(output_dim=4)
+model = CNN3(output_dim=N_CLASSES)
 print(f'Model Parameters: {model.count_parameters(model)}')
 
 # move model weights to device

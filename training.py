@@ -10,7 +10,8 @@ import numpy as np
 # Report metrics
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
-from utils.emodb import get_classes
+from utils import emodb
+from utils import iemocap
 from sklearn.metrics import f1_score, accuracy_score
 from inspect import getsource
 from plotting.metrics import plot_confusion_matrix
@@ -355,7 +356,10 @@ def results(model, optimizer, loss_function,
 
     # Confusion matrix
     conf_matrix = confusion_matrix(y_true=y_true, y_pred=y_pred)
-    classes = get_classes()
+    if dataset == "IEMOCAP":
+        classes = iemocap.get_classes(n_classes=4)
+    elif dataset == "EMODB":
+        classes = emodb.get_classes()
     cnf_mtrx_filename = f'{model.__class__.__name__}_{epochs}_{timestamp}_confusion_matrix.png'
     plot_confusion_matrix(cm=conf_matrix, classes=classes,
                           filename=cnf_mtrx_filename)

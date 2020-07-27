@@ -36,7 +36,7 @@ class CNN(nn.Module):
         self.dropout2 = nn.Dropout2d(0.5)
 
         # self.fc0 = nn.Linear(18480, 7200)
-        self.fc1 = nn.Linear(7200, 4096)   # linear layer 7200
+        self.fc1 = nn.Linear(6240, 4096)   # linear layer 7200
         self.fc2 = nn.Linear(4096, 1024)
         self.fc3 = nn.Linear(1024, 256)
         self.fc4 = nn.Linear(256, output_dim)

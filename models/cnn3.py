@@ -53,7 +53,7 @@ class CNN3(nn.Module):
 
         self.linear_layer1 = nn.Sequential(
             nn.Dropout2d(0.75),
-            nn.Linear(220416, 1024),   # linear layer 7200
+            nn.Linear(73472, 1024),  # 68096   # linear layer 7200
             nn.LeakyReLU(),
 
             # nn.Dropout2d(0.75),

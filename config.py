@@ -19,8 +19,9 @@ RECOMPUTE = True
 
 # Sampling process
 SAMPLING_RATE = 16000
-WINDOW_LENGTH = round(0.025 * SAMPLING_RATE)
-HOP_LENGTH = round(0.010 * SAMPLING_RATE)
+WINDOW_LENGTH = round(.2 * SAMPLING_RATE)  # 200ms * samplingrate
+HOP_LENGTH = WINDOW_LENGTH//2  # 50% overlap
+# HOP_LENGTH = round(0.010 * 2 * SAMPLING_RATE)
 
 # Plotting
 # Folders

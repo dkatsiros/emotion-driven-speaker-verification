@@ -37,7 +37,7 @@ class EmodbDataset(Dataset):
                 x) for x in X_parsed]
             # (features,seq_len) -> (seq_len,features)
             # X = [np.swapaxes(x, 0, 1) for x in X_parsed]
-            sound_processing.preview_melspectrogram(X[1])
+            # sound_processing.preview_melspectrogram(X[1])
 
         elif feature_extraction_method == "MFCC":
             # Get file read using librosa
@@ -151,8 +151,7 @@ class IemocapDataset(Dataset):
             # Get file read using librosa
             X_parsed = [iemocap.parse_wav(x) for x in X]
             # Get spectrogram
-            X = [sound_processing.get_melspectrogram(
-                x) for x in X_parsed]
+            X = [sound_processing.get_melspectrogram(x) for x in X_parsed]
             # (features,seq_len) -> (seq_len,features)
             # X = [np.swapaxes(x, 0, 1) for x in X_parsed]
             sound_processing.preview_melspectrogram(X[1])
@@ -225,7 +224,7 @@ class IemocapDataset(Dataset):
             return padded
 
         elif self.feature_extraction_method == "MEL_SPECTROGRAM":
-            max_length = 998  # self.lengths.max()
+            max_length = 342  # 320  # 998  # self.lengths.max()
 
             feature_dim = X[0].shape[-1]
             padded = np.zeros((len(X), max_length, feature_dim))

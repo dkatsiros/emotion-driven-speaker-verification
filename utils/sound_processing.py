@@ -52,17 +52,26 @@ def get_features_mean_var(loaded_wav=None):
     return np.ravel((mean, variance), order='F')  # (78,) -- 1darray
 
 
-def get_melspectrogram(loaded_wav=None):
+def get_melspectrogram(loaded_wav=None, n_fft=None, hop_length=None):
     """Returns a mel spectrogram."""
 
     if loaded_wav is None:
         return None
 
+    # Set some values
+    if n_fft is None:
+        n_fft = WINDOW_LENGTH
+    if hop_length is None:
+        hop_length = HOP_LENGTH
     # Get spectrogram
     spectrogram = librosa.feature.melspectrogram(
-        y=loaded_wav, sr=SAMPLING_RATE)  # , n_mels=128, hop_length=HOP_LENGTH, n_fft=2048)
+        y=loaded_wav,
+        sr=SAMPLING_RATE,
+        n_fft=n_fft,
+        hop_length=hop_length)
     # Convert to MEL-Scale
-    spectrogram_dB = librosa.power_to_db(spectrogram, ref=np.max)  # (n_mel,t)
+    spectrogram_dB = librosa.power_to_db(
+        spectrogram, ref=np.max)  # (n_mel,t)
     # Transpose to return (time,n_mel)
     return spectrogram_dB.T
 
