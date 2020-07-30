@@ -15,7 +15,7 @@ from utils import iemocap
 from sklearn.metrics import f1_score, accuracy_score
 from inspect import getsource
 from plotting.metrics import plot_confusion_matrix
-from config import PLOTS_FOLDER, REPORTS_FOLDER
+from core.config import PLOTS_FOLDER, REPORTS_FOLDER
 
 
 def train_and_validate(model,

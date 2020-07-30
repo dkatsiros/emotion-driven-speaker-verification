@@ -3,7 +3,8 @@ import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 
-from config import PLOTS_FOLDER
+from core.config import PLOTS_FOLDER
+
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,

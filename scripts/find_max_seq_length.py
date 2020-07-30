@@ -1,7 +1,7 @@
 # import sys
-from utils.sound_processing import load_wav, get_melspectrogram
+from lib.sound_processing import load_wav, get_melspectrogram
 import numpy as np
-from config import WINDOW_LENGTH
+from core.config import WINDOW_LENGTH
 # from setting import sampling rate
 from plotting.class_stats import plot_iemocap_classes_population
 from utils.load_dataset import load_IEMOCAP
