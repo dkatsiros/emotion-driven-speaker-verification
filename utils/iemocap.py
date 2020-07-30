@@ -1,4 +1,4 @@
-from utils import sound_processing
+from lib import sound_processing
 
 
 def read_evaluation_file(eval_file=None):

@@ -9,20 +9,20 @@ from models import knn, svm, mlp
 from config import EMB_PATH, EMB_DIM, EMB_FILE
 from config import DATASET_PATH, DATASET_FOLDER
 from config import VARIABLES_FOLDER
-from utils.sound_processing import get_features_mean_var
+from lib.sound_processing import get_features_mean_var
 from utils.load_embeddings import load_word_vectors
 from utils.emodb import (parse_wav,
-                        get_indexes_for_wav_categories)
+                         get_indexes_for_wav_categories)
 from plotting.class_stats import class_statistics
 from torch.utils.data import DataLoader
-from dataloading import EmodbDataset
+from dataloading.emodb import EmodbDataset
 
 
 # EMBEDDINGS = os.path.join(EMB_PATH, EMB_FILE)
 
 # word2idx, idx2word, embeddings = load_word_vectors(file=EMBEDDINGS, dim=EMB_DIM)
 
-#----------------------------
+# ----------------------------
 # DATASET
 # Load dataset
 DATASET = os.path.join(DATASET_PATH, DATASET_FOLDER)
@@ -30,7 +30,7 @@ DATASET = os.path.join(DATASET_PATH, DATASET_FOLDER)
 if not os.path.exists(DATASET):
     raise FileNotFoundError
 # Get filenames
-dataset_files = glob.iglob(''.join([DATASET,'*.wav']))
+dataset_files = glob.iglob(''.join([DATASET, '*.wav']))
 
 # Try loading features
 # Create paths
@@ -57,7 +57,7 @@ except:
         librosa_loaded_file = parsed_file[0]
         # Get features
         feature = get_features_mean_var(librosa_loaded_file)
-        features.append(feature) # (#samples,78)
+        features.append(feature)  # (#samples,78)
 
     # Save variables using joblib
     joblib.dump(parsed_files, FEATURES_FILE)
@@ -70,20 +70,20 @@ categories = get_indexes_for_wav_categories(parsed_files)
 class_statistics(categories, save=True)
 
 
-#----------------------------
+# ----------------------------
 # MODEL
 # Create X:features to y:labels mapping
-X = np.array(features) # (#samples,78)
-y = np.array([f[3] for f in parsed_files], dtype=int) # (#samples,)
+X = np.array(features)  # (#samples,78)
+y = np.array([f[3] for f in parsed_files], dtype=int)  # (#samples,)
 
 # Split to train and test set
 X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                     shuffle=True, test_size=0.3,random_state=0)
+                                                    shuffle=True, test_size=0.3, random_state=0)
 
 # Run svm classifier
 svm.use(X_train, y_train, X_test, y_test, oversampling=True, pca=False)
 
-svm.use_svm_cv(X,y,oversampling=False)
+svm.use_svm_cv(X, y, oversampling=False)
 
 # Define PyTorch Dataset
 train_loader = EmodbDataset(X_train, y_train)

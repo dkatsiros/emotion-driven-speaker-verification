@@ -3,8 +3,8 @@ import time
 from copy import deepcopy
 import torch
 from torch import optim
-from utils.load_dataset import load_Emodb
-from dataloading import EmodbDataset
+from utils.load_dataset import load_IEMOCAP
+from dataloading.iemocap import IemocapDataset
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
 
@@ -12,14 +12,14 @@ from models.lstm import LSTM
 from models.cnn import CNN
 from models.cnn2 import CNN2
 from models.cnn3 import CNN3
-from training import train_and_validate, test, results, overfit
+from lib.training import train_and_validate, test, results, overfit
 # progress, fit, print_results
 from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
 import os
-import joblib
 import random
 from plotting.class_stats import dataloader_stats, samples_lengths
 
+DATASET = "IEMOCAP"
 
 # Deterministic ?
 if DETERMINISTIC is True:
@@ -33,8 +33,12 @@ if DETERMINISTIC is True:
     torch.backends.cudnn.deterministic = True
 
 
+N_CLASSES = 4
+
 # Split dataset to arrays
-X_train, y_train, X_test, y_test, X_eval, y_eval = load_Emodb()
+[X_train, y_train,
+ X_test, y_test,
+ X_eval, y_eval] = load_IEMOCAP(n_classes=N_CLASSES)
 
 # PyTorch
 BATCH_SIZE = 16  # len(X_train) // 20
@@ -44,48 +48,52 @@ EPOCHS = 500
 CNN_BOOLEAN = True
 
 # Load sets using dataset class
-train_set = EmodbDataset(X_train, y_train, oversampling=True,
-                         feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
+train_set = IemocapDataset(X_train, y_train, oversampling=True,
+                           feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
 
-test_set = EmodbDataset(
+test_set = IemocapDataset(
     X_test, y_test, feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
-eval_set = EmodbDataset(
+
+eval_set = IemocapDataset(
     X_eval, y_eval, feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
 
 
 # PyTorch DataLoader
 try:
-    TRAIN_LOADER = os.path.join(VARIABLES_FOLDER, 'train_loader.pkl')
+    TRAIN_LOADER = os.path.join(VARIABLES_FOLDER, 'train_loader.pt')
     if RECOMPUTE is True:
         raise NameError('Forced recomputing values.')
-    train_loader = joblib.load(TRAIN_LOADER)
+    train_loader = torch.load(TRAIN_LOADER)
 except:
     train_loader = DataLoader(
         train_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-    joblib.dump(train_loader, TRAIN_LOADER)
-dataloader_stats(train_loader, filename='train_loader_statistics.png')
+    torch.save(train_loader, TRAIN_LOADER)
+dataloader_stats(
+    train_loader, filename='train_loader_statistics.png', dataset=DATASET)
 
 try:
-    TEST_LOADER = os.path.join(VARIABLES_FOLDER, 'test_loader.pkl')
+    TEST_LOADER = os.path.join(VARIABLES_FOLDER, 'test_loader.pt')
     if RECOMPUTE is True:
         raise NameError('Forced recomputing values.')
-    test_loader = joblib.load(TEST_LOADER)
+    test_loader = torch.load(TEST_LOADER)
 except:
     test_loader = DataLoader(
         test_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-    joblib.dump(test_loader, TEST_LOADER)
-    dataloader_stats(test_loader, filename='test_loader_statistics.png')
+    torch.save(test_loader, TEST_LOADER)
+    dataloader_stats(
+        test_loader, filename='test_loader_statistics.png', dataset=DATASET)
 
 try:
-    VALID_LOADER = os.path.join(VARIABLES_FOLDER, 'valid_loader.pkl')
+    VALID_LOADER = os.path.join(VARIABLES_FOLDER, 'valid_loader.pt')
     if RECOMPUTE is True:
         raise NameError('Forced recomputing values.')
-    valid_loader = joblib.load(VALID_LOADER)
+    valid_loader = torch.load(VALID_LOADER)
 except:
     valid_loader = DataLoader(
         eval_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-    joblib.dump(valid_loader, VALID_LOADER)
-    dataloader_stats(valid_loader, filename='valid_loader_statistics.png')
+    torch.save(valid_loader, VALID_LOADER)
+    dataloader_stats(
+        valid_loader, filename='valid_loader_statistics.png', dataset=DATASET)
 
 # Print sequence length diagram for samples
 # samples_lengths(dataloaders=[train_loader, valid_loader])
@@ -98,7 +106,7 @@ print(f'Running on: {device}.\n')
 # model = LSTM(input_size=39, hidden_size=6, output_size=7, num_layers=3,
 #              bidirectional=True, dropout=0.2)
 
-model = CNN3(output_dim=7)
+model = CNN3(output_dim=N_CLASSES)
 print(f'Model Parameters: {model.count_parameters(model)}')
 
 # move model weights to device
@@ -145,9 +153,10 @@ best_model, train_losses, valid_losses, train_accuracy, valid_accuracy, _epochs 
 timestamp = time.ctime()
 
 modelname = os.path.join(
-    VARIABLES_FOLDER, f'{best_model.__class__.__name__}_{_epochs}_{timestamp}.pkl')
+    VARIABLES_FOLDER, f'{best_model.__class__.__name__}_{_epochs}_{timestamp}.pt')
 # Save model for later use
-joblib.dump(best_model, modelname)
+torch.save(best_model.state_dict(), modelname)
+
 # ===== TEST =====
 y_pred, y_true = test(best_model, test_loader, cnn=CNN_BOOLEAN)
 # ===== RESULTS =====
@@ -155,4 +164,4 @@ results(model=best_model, optimizer=optimizer, loss_function=loss_function,
         train_loss=train_losses, valid_loss=valid_losses,
         train_accuracy=train_accuracy, valid_accuracy=valid_accuracy,
         y_pred=y_pred, y_true=y_true, epochs=_epochs,
-        cv=CROSS_VALIDATION_EPOCHS, timestamp=timestamp)
+        cv=CROSS_VALIDATION_EPOCHS, timestamp=timestamp, dataset=DATASET)

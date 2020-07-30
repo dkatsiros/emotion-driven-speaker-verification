@@ -1,7 +1,7 @@
 """Export diagrams."""
 import os
 import matplotlib.pyplot as plt
-from config import PLOTS_FOLDER
+from core.config import PLOTS_FOLDER
 import numpy as np
 
 

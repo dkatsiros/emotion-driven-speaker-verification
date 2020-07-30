@@ -1,9 +1,10 @@
-from utils import sound_processing
+from lib import sound_processing
+
 
 def get_file_details(filename):
     """Split the filename, return the details."""
     import re
-    match = re.search(r'.*/(.+?).wav',filename)
+    match = re.search(r'.*/(.+?).wav', filename)
     if not match:
         return None
     # Regex match
@@ -50,14 +51,14 @@ def idx2emotion(idx=None):
     # Get classes
     classes = get_classes()
     # Create mapping
-    mapping = {i:c for i, c in enumerate(classes)}
+    mapping = {i: c for i, c in enumerate(classes)}
     return mapping[idx]
 
 
 def get_classes():
     return ['Neutral', 'Anger', 'Fear',
-             'Joy', 'Sadness', 'Disgust',
-             'Boredom']
+            'Joy', 'Sadness', 'Disgust',
+            'Boredom']
 
 
 def parse_wav(filename=None):
@@ -73,10 +74,9 @@ def parse_wav(filename=None):
 
 def get_indexes_for_wav_categories(files):
     """Return a mapping (category) -> (indexes)."""
-    mapping = {i:[] for i in range(0,7)}
+    mapping = {i: [] for i in range(0, 7)}
     # Iterate each file and map
     for idx, file in enumerate(files):
         emotion_idx = file[3]
         mapping[emotion_idx].append(idx)
     return mapping
-
