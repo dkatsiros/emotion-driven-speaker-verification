@@ -7,7 +7,7 @@ from utils import emodb
 from utils import iemocap
 
 
-def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True):
+def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True, train_only=False):
     """Return X_train, y_train, X_test, y_test of EMODB dataset."""
 
     # Get percentages
@@ -25,6 +25,9 @@ def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True):
     dataset_files_raw = [x for x in glob.iglob(''.join([DATASET, '*.wav']))]
     dataset_labels_raw = [emodb.get_file_details(
         file)[2] for file in dataset_files_raw]
+
+    if train_only is True:
+        return dataset_files_raw, dataset_labels_raw
 
     # Initialize
     X_train_, y_train_ = [], []
@@ -67,7 +70,7 @@ def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True):
     return X_train, y_train, X_test, y_test, X_val, y_val
 
 
-def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_classes=9):
+def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_classes=9, train_only=False):
     """
     Return X_train, y_train, X_test, y_test of EMODB dataset.
     Warning: Labels are already integers.
@@ -114,6 +117,9 @@ def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_clas
                                       f)
                 filenames.append(''.join([f_path, '.wav']))
                 labels.append(l)
+
+    if train_only is True:
+        return filenames, labels
 
     # Initialize
     X_train_, y_train_ = [], []
