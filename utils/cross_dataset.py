@@ -18,7 +18,7 @@ class CrossDataset():
 
     def add_dataset_train(self, X, y, name=None, mapping=None):
         """Add a dataset to the CrossDataset training.
-Arguments:
+### Arguments:
 
         X {list} : A list of sample paths.
 
@@ -30,7 +30,7 @@ Arguments:
                          `Neutral:0`, `Anger:1`,
                          `Happiness:2` and
                          `Sadness:3` respectively.
-Returns:
+### Returns:
 
         True if the dataset was added else False.
 
@@ -65,7 +65,7 @@ Returns:
 
     def add_dataset_test(self, X, y, name=None, mapping=None):
         """Add a dataset to the CrossDataset testing.
-Arguments:
+### Arguments:
 
         X {list} : A list of sample paths.
 
@@ -77,7 +77,7 @@ Arguments:
                          `Neutral:0`, `Anger:1`,
                          `Happiness:2` and
                          `Sadness:3` respectively.
-Returns:
+### Returns:
 
         True if the dataset was added else False.
 
@@ -152,7 +152,7 @@ Returns:
     @staticmethod
     def remove_extra_labels(X, y, mapping):
         """For a given mapping, remove each y that doesn't exist in that.
-# Arguments:
+### Arguments:
         X {list}: A list of samples.
 
         y {list}: A list of labels.
@@ -161,7 +161,7 @@ Returns:
                          that correspond to cross-dataset's
                          labels.
 
-# Returns:
+### Returns:
         X_new {list}: A list with all samples that are
                         left after filtering.
 
