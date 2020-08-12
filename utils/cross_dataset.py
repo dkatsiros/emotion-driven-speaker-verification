@@ -149,6 +149,33 @@ class CrossDataset():
 
         return X_train, y_train, X_val, y_val
 
+    def get_test_data(self, shuffle=False):
+        """Return test data.
+
+### Arguments:
+
+        Shuffle {bool} : If True, shuffles test data.
+
+### Returns:
+
+        X_test {list} : Testing data.
+
+        y_test {list} : Testing labels.
+        """
+        import random
+
+        if shuffle is False:
+            return self.X_test, self.y_test
+
+        # Zip samples and labels
+        zipped = list(zip(self.X_test, self.y_test, self.X_idx_test))
+        # Shuffle zipped array
+        random.shuffle(zipped)
+        # Unzip
+        self.X_test, self.y_test, self.X_idx_test = zip(*zipped)
+
+        return self.X_test, self.y_test
+
     @staticmethod
     def remove_extra_labels(X, y, mapping):
         """For a given mapping, remove each y that doesn't exist in that.

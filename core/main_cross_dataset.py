@@ -29,3 +29,7 @@ assert cross_dataset.add_dataset_test(
 # Get train data
 X_train, y_train, X_val, y_val = cross_dataset.get_train_val_data(
     validation_ratio=.2)
+
+
+# Get test data
+X_test, y_test = cross_dataset.get_test_data(shuffle=False)
