@@ -3,11 +3,10 @@ import glob2 as glob
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
 from imblearn.over_sampling import SMOTE
-from utils import emodb
-from utils import iemocap
 
 
 def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True, train_only=False):
+    from utils import emodb
     """Return X_train, y_train, X_test, y_test of EMODB dataset."""
 
     # Get percentages
@@ -72,9 +71,10 @@ def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True, train_on
 
 def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_classes=9, train_only=False):
     """
-    Return X_train, y_train, X_test, y_test of EMODB dataset.
+    Return X_train, y_train, X_test, y_test of IEMOCAP dataset.
     Warning: Labels are already integers.
     """
+    from utils import iemocap
 
     # Minor checks
     if n_classes not in list(range(1, 10)):
@@ -117,6 +117,82 @@ def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_clas
                                       f)
                 filenames.append(''.join([f_path, '.wav']))
                 labels.append(l)
+
+    if train_only is True:
+        return filenames, labels
+
+    # Initialize
+    X_train_, y_train_ = [], []
+    X_test, y_test = [], []
+    X_train, y_train = [], []
+    X_val, y_val = [], []
+    # First split
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=test_p)
+    train_idx, test_idx = next(
+        sss.split(filenames, labels))
+    # Train
+    for idx in train_idx:
+        X_train_.append(filenames[idx])
+        y_train_.append(labels[idx])
+    # Test
+    for idx in test_idx:
+        X_test.append(filenames[idx])
+        y_test.append(labels[idx])
+
+    # Before training oversample
+    # if oversampling is True:
+    #     X_train_ = [[x] for x in X_train_]
+    #     X_train_, y_train_ = SMOTE().fit_resample(X_train_, y_train_)
+
+    if validation is False:
+        return X_train_, y_train_, X_test, y_test
+
+    # If valuation is True split again
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=val_p)
+    train_idx, val_idx = next(sss.split(X_train_, y_train_))
+    # Train after both splits
+    for idx in train_idx:
+        X_train.append(X_train_[idx])
+        y_train.append(y_train_[idx])
+    # validation
+    for idx in val_idx:
+        X_val.append(X_train_[idx])
+        y_val.append(y_train_[idx])
+
+    return X_train, y_train, X_test, y_test, X_val, y_val
+
+
+def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_only=False):
+    """
+    Return X_train, y_train, X_test, y_test of RAVDESS dataset.
+    """
+    from utils import ravdess
+
+    # Get percentages
+    test_p, val_p = test_val
+
+    # Files
+    DATASET_PATH = "datasets/"
+    DATASET_FOLDER = "ravdess/"
+    # Load dataset
+    DATASET = os.path.join(DATASET_PATH, DATASET_FOLDER)
+    # Check that the dataset folder exists
+    if not os.path.exists(DATASET):
+        raise FileNotFoundError
+
+    # Get all actors
+    actors = glob.glob(os.path.join(DATASET, 'Actor*'))
+    filenames = []
+    labels = []
+
+    # Each filename is encoded and contains the label of each wav
+    # Get all filenames into a list
+    for actor in actors:
+        filenames.extend(glob.glob(os.path.join(actor, '*.wav')))
+
+    for file in filenames:
+        label = ravdess.read_file_identifiers(file, labels_only=True)
+        labels.append(label)
 
     if train_only is True:
         return filenames, labels
