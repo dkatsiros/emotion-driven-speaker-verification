@@ -26,7 +26,7 @@ class CrossDataset():
 
         name {str} : Datasets name.
 
-        mapping {dict} : A dictionary mappin each label to
+        mapping {dict} : A dictionary mapping each label to
                          `Neutral:0`, `Anger:1`,
                          `Happiness:2` and
                          `Sadness:3` respectively.
