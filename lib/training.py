@@ -179,13 +179,6 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
                  batch_size=dataloader.batch_size,
                  dataset_size=len(dataloader.dataset))
 
-    # print statistics
-    progress(loss=training_loss / len(dataloader.dataset),
-             epoch=_epoch,
-             batch=index,
-             batch_size=dataloader.batch_size,
-             dataset_size=len(dataloader.dataset))
-
     accuracy = correct/len(dataloader.dataset) * 100
     # Print some stats
     # print(
@@ -360,6 +353,8 @@ def results(model, optimizer, loss_function,
         classes = iemocap.get_classes(n_classes=4)
     elif dataset == "EMODB":
         classes = emodb.get_classes()
+    else:
+        classes = iemocap.get_classes(n_classes=4)
     cnf_mtrx_filename = f'{model.__class__.__name__}_{epochs}_{timestamp}_confusion_matrix.png'
     plot_confusion_matrix(cm=conf_matrix, classes=classes,
                           filename=cnf_mtrx_filename)

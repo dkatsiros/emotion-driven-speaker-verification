@@ -18,4 +18,8 @@ plotting/plots/
 plotting/reports/
 
 # Extra files
+<<<<<<< HEAD
 extra/*
+=======
+extra/*
+>>>>>>> c8698e3... Add VoxCeleb metadata retrieving, minor fixes

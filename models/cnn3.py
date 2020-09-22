@@ -14,7 +14,7 @@ from torch.utils.data import SubsetRandomSampler, DataLoader
 
 
 class CNN3(nn.Module):
-    def __init__(self, output_dim=7):
+    def __init__(self, output_dim=7, linear_layer_dim=None):
         super(CNN3, self).__init__()
 
         self.layer1 = nn.Sequential(
@@ -53,7 +53,9 @@ class CNN3(nn.Module):
 
         self.linear_layer1 = nn.Sequential(
             nn.Dropout2d(0.75),
-            nn.Linear(73472, 1024),  # 68096   # linear layer 7200
+            # 68096   # linear layer 7200
+            nn.Linear(
+                linear_layer_dim if linear_layer_dim is not None else 73472, 1024),
             nn.LeakyReLU(),
 
             # nn.Dropout2d(0.75),
