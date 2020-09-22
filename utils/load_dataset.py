@@ -236,3 +236,62 @@ def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_
         y_val.append(y_train_[idx])
 
     return X_train, y_train, X_test, y_test, X_val, y_val
+
+
+def load_VoxCeleb(val_ratio=0.05, validation=True, oversampling=True):
+    """
+Return X_train, y_train, X_val, y_val and X_test, y_test
+** `test_ratio` is fixed, unlike other datasets above. 
+"""
+    # Initialize
+    X_train_, y_train_ = [], []
+    X_test, y_test = [], []
+    X_train, y_train = [], []
+    X_val, y_val = [], []
+
+    TRAIN_FOLDER = "datasets/voxceleb1/wav/"
+    for celeb_id in glob.iglob(os.path.join(TRAIN_FOLDER, '*/')):
+        # Get all wavs for the current celebrity
+        import re
+        regex_search = re.search(r'.*/id(.*)/', celeb_id)
+        celeb_id_int = int(regex_search.group(1))
+
+        for wav in glob.iglob(os.path.join(celeb_id, '*/*.wav')):
+            # Add file path to train
+            X_train_.append(wav)
+            # Add label / id
+            y_train_.append(celeb_id_int)
+
+    if validation is True:
+        # If valuation is True split again
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=val_ratio)
+        train_idx, val_idx = next(sss.split(X_train_, y_train_))
+        # Train after both splits
+        for idx in train_idx:
+            X_train.append(X_train_[idx])
+            y_train.append(y_train_[idx])
+        # validation
+        for idx in val_idx:
+            X_val.append(X_train_[idx])
+            y_val.append(y_train_[idx])
+    else:
+        X_train, y_train = X_train_, y_train_
+
+    # Now for the test part
+    TEST_FOLDER = "datasets/voxceleb1/test/wav/"
+    for celeb_id in glob.iglob(os.path.join(TEST_FOLDER, '*/')):
+        # Get all wavs for the current celebrity
+        import re
+        regex_search = re.search(r'.*/id(.*)/', celeb_id)
+        celeb_id_int = int(regex_search.group(1))
+
+        for wav in glob.iglob(os.path.join(celeb_id, '*/*.wav')):
+            # Add file path to train
+            X_test.append(wav)
+            # Add label / id
+            y_test.append(celeb_id_int)
+
+    if validation is True:
+        return X_train, y_train, X_test, y_test, X_val, y_val
+
+    return X_train, y_train, X_test, y_test
