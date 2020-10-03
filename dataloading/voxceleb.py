@@ -10,7 +10,10 @@ import numpy as np
 class VoxcelebDataset(Dataset):
     """Custom PyTorch Dataset for preparing features from wav inputs."""
 
-    def __init__(self, X, y, feature_extraction_method="MFCC", oversampling=False):
+    def __init__(self, X, y,
+                 feature_extraction_method="MFCC",
+                 oversampling=False,
+                 fixed_length=True):
         """Create all important variables for dataset tokenization
 
         Arguments:
@@ -20,6 +23,7 @@ class VoxcelebDataset(Dataset):
             oversampling {bool} -- [Resampling technique to be applied]
         """
         self.feature_extraction_method = feature_extraction_method
+        self.fixed_length = fixed_length
 
         if oversampling is True:
             ros = RandomOverSampler()
@@ -117,6 +121,12 @@ class VoxcelebDataset(Dataset):
                     diff = max_length - X[i].shape[0]
                     # pad
                     X[i] = np.vstack((X[i], np.zeros((diff, feature_dim))))
+                else:
+                    if self.fixed_length is True:
+                        # Set a fixed length => information loss
+                        X[i] = np.take(X[i], list(
+                            range(0, max_length)), axis=0)
+                # Add to padded
                 padded[i, :, :] = X[i]
             return padded
 
