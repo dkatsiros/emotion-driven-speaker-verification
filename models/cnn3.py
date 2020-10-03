@@ -1,71 +1,62 @@
-import copy
-import re
-import os
-import numpy as np
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import accuracy_score, f1_score, recall_score
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import Dataset
-from torch.utils.data import SubsetRandomSampler, DataLoader
 
 
 class CNN3(nn.Module):
-    def __init__(self, output_dim=7, linear_layer_dim=None):
-        super(CNN3, self).__init__()
+    def __init__(self, height, width, output_dim=7, first_channels=32, kernel_size=5):
+        super(CNN1, self).__init__()
+        self.num_cnn_layers = 3
+        self.cnn_channels = 2
+        self.height = height
+        self.width = width
+        self.first_channels = first_channels
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=5, stride=1, padding=2),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(1,
+                      first_channels,
+                      kernel_size=kernel_size,
+                      stride=1,
+                      padding=2),
+            nn.BatchNorm2d(first_channels),
             nn.LeakyReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=1),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(first_channels,
+                      self.cnn_channels*first_channels,
+                      kernel_size=kernel_size,
+                      stride=1,
+                      padding=2),
+            nn.BatchNorm2d(self.cnn_channels*first_channels),
             nn.LeakyReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
 
         self.layer3 = nn.Sequential(
-            nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=1),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(2*first_channels,
+                      (self.cnn_channels**2) * gfirst_channels,
+                      kernel_size=kernel_size,
+                      stride=1,
+                      padding=2),
+            nn.BatchNorm2d((self.cnn_channels**2)*first_channels),
             nn.LeakyReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
 
-        # self.layer4 = nn.Sequential(
-        #     nn.Conv2d(128, 256, kernel_size=5, stride=1, padding=1),
-        #     nn.BatchNorm2d(256),
-        #     nn.LeakyReLU(),
-        #     nn.MaxPool2d(kernel_size=2, stride=2)
-        # )
-
-        # self.layer5 = nn.Sequential(
-        #     nn.Conv2d(256, 512, kernel_size=5, stride=1, padding=1),
-        #     nn.BatchNorm2d(512),
-        #     nn.LeakyReLU(),
-        #     nn.MaxPool2d(kernel_size=2, stride=2)
-        # )
-
         self.linear_layer1 = nn.Sequential(
             nn.Dropout2d(0.75),
-            # 68096   # linear layer 7200
-            nn.Linear(
-                linear_layer_dim if linear_layer_dim is not None else 73472, 1024),
-            nn.LeakyReLU(),
+            nn.Linear(self.calc_out_size(), 1024),
+            nn.LeakyReLU()
+        )
 
-            # nn.Dropout2d(0.75),
-            # nn.Linear(2048, 1024),
-            # nn.LeakyReLU(),
-
+        self.linear_layer2 = nn.Sequential(
             nn.Dropout(0.5),
             nn.Linear(1024, 256),
-            nn.LeakyReLU(),
+            nn.LeakyReLU()
+        )
 
+        self.linear_layer3 = nn.Sequential(
             # nn.Dropout(0.2),
             nn.Linear(256, output_dim),
             nn.LeakyReLU()
@@ -79,14 +70,21 @@ class CNN3(nn.Module):
         out = self.layer1(x)
         out = self.layer2(out)
         out = self.layer3(out)
-        # out = self.layer4(out)
-        # out = self.layer5(out)
-        out = out.view(len(out), -1)
+        out = out.view(out.size(0), -1)
 
-        # DNN
+        # DNN -- pass through linear layers
         out = self.linear_layer1(out)
+        out = self.linear_layer2(out)
+        out = self.linear_layer3(out)
 
         return out
+
+    def calc_out_size(self):
+        height = int(self.height / 8)
+        width = int(self.width / 8)
+        kernels = self.cnn_channels * \
+            (self.num_cnn_layers - 1) * self.first_channels
+        return kernels * height * width
 
     @ staticmethod
     def count_parameters(model):
