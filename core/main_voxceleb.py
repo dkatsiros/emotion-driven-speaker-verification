@@ -11,6 +11,7 @@ from torch.nn import functional as F
 from models.lstm import LSTM
 from models.cnn3 import CNN3
 from lib.training import train_and_validate, test, results, overfit
+from lib.sound_processing import compute_max_sequence_length, compute_sequence_length_distribution
 # progress, fit, print_results
 from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
 import os
@@ -33,6 +34,9 @@ if DETERMINISTIC is True:
 
 # Split dataset to arrays
 X_train, y_train, X_test, y_test, X_eval, y_eval = load_VoxCeleb()
+
+# max_seq_len = compute_max_sequence_length(X=X_train+X_eval)
+max_seq_len = compute_sequence_length_distribution(X=X_train+X_eval)
 
 # PyTorch
 BATCH_SIZE = 16  # len(X_train) // 20

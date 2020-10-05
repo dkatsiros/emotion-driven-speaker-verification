@@ -10,8 +10,11 @@ import numpy as np
 # Report metrics
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
+
 from utils import emodb
 from utils import iemocap
+from utils import voxceleb
+
 from sklearn.metrics import f1_score, accuracy_score
 from inspect import getsource
 from plotting.metrics import plot_confusion_matrix
@@ -28,9 +31,9 @@ def train_and_validate(model,
                        cross_validation_epochs=5,
                        early_stopping=False):
     """
-    Trains the given <model>.
-    Then validates every <cross_validation_epochs>.
-    Returns: <best_model> containing the model with best parameters.
+    Trains the given `model`.
+    Then validates every `cross_validation_epochs`.
+    Returns: `best_model` containing the model with best parameters.
     """
 
     # obtain the model's device ID
@@ -248,7 +251,6 @@ def test(model, dataloader, cnn=False):
     # obtain the model's device ID
     device = next(model.parameters()).device
 
-    correct = 0
     # Create empty array for storing predictions and labels
     y_pred = []
     y_true = []
@@ -353,6 +355,8 @@ def results(model, optimizer, loss_function,
         classes = iemocap.get_classes(n_classes=4)
     elif dataset == "EMODB":
         classes = emodb.get_classes()
+    elif dataset == "VOXCELEB":
+        classes = voxceleb.get_classes()
     else:
         classes = iemocap.get_classes(n_classes=4)
     cnf_mtrx_filename = f'{model.__class__.__name__}_{epochs}_{timestamp}_confusion_matrix.png'

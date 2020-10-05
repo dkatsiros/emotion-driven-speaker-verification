@@ -100,3 +100,69 @@ def read_mel_spectrogram(spectrogram_file):
     print(spectrogram)
     spectrogram = spectrogram[:128]
     return spectrogram.T
+
+
+def compute_max_sequence_length(X=None):
+    """Compute max sequence length *100 faster than using librosa."""
+    import contextlib
+    import wave
+    from math import ceil
+    if X is None:
+        raise AssertionError()
+
+    max_seq = 0
+    total_seq = 0
+    for f in X:
+        with contextlib.closing(wave.open(f, 'r')) as fp:
+            frames = fp.getnframes()
+            length = ceil(frames / HOP_LENGTH)
+            total_seq += length
+            if length > max_seq:
+                max_seq = length
+    print(f"Average sequence length in dataset: {total_seq/len(X)}")
+    print(f"Max sequence length in dataset: {max_seq}")
+    return max_seq
+
+
+def compute_sequence_length_distribution(X=None, n_bins=10, plots=False):
+    import contextlib
+    import wave
+    import matplotlib.pyplot as plt
+    from math import sqrt, ceil
+
+    if X is None:
+        raise AssertionError()
+
+    max_seq = 0
+    lengths = []
+    for f in X:
+        with contextlib.closing(wave.open(f, 'r')) as fp:
+            frames = fp.getnframes()
+            length = int(frames / HOP_LENGTH) + 1
+            lengths.append(length)
+    max_seq = max(lengths)
+    print(f"Max sequence length in dataset: {max_seq}")
+    min_length = min(lengths)
+    max_length = max(lengths)
+    step = int((max_length-min_length)/n_bins)
+    bins = [min_length + i * step for i in range(0, n_bins+1)]
+    # Plot diagram
+    plt.figure(figsize=(10, 10))
+    plt.hist(x=lengths, bins=bins)
+    plt.show(block=True)
+
+    # So a good idea is to trucate marginal values
+    upper_limit = ceil(np.mean(lengths) + 3 * sqrt(np.var(lengths)))
+    print(f"Upper value: {upper_limit}")
+    min_length = min(lengths)
+    max_length = upper_limit
+    step = int((upper_limit-min_length)/n_bins)
+    bins = [min_length + i * step for i in range(0, n_bins+1)]
+    # Plot diagram
+    plt.figure(figsize=(10, 10))
+    plt.hist(x=lengths, bins=bins)
+    plt.show(block=True)
+    information = filter(lambda x: x <= upper_limit, lengths)
+    print(f"Total information: {len(list(information))/len(lengths) *100:0.2f}\
+% by lowering max_sequence_length from {max_seq} to {upper_limit}")
+    return upper_limit
