@@ -238,11 +238,15 @@ def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_
     return X_train, y_train, X_test, y_test, X_val, y_val
 
 
-def load_VoxCeleb(val_ratio=0.05, validation=True, oversampling=True):
+def load_VoxCeleb(val_ratio=0.05, validation=True, oversampling=True, sparse_dataset=None):
     """
 Return X_train, y_train, X_val, y_val and X_test, y_test
 ** `test_ratio` is fixed, unlike other datasets above. 
+`sparse_dataset` : Keep only  `i` mod `sparse_dataset` elements.
+                as a result len(X) = len(X)/sparse_dataset.
 """
+    idx = -1
+
     # Initialize
     X_train_, y_train_ = [], []
     X_test, y_test = [], []
@@ -251,6 +255,12 @@ Return X_train, y_train, X_val, y_val and X_test, y_test
 
     TRAIN_FOLDER = "datasets/voxceleb1/wav/"
     for celeb_id in glob.iglob(os.path.join(TRAIN_FOLDER, '*/')):
+        # Sparse dataset. Remove some celebs from data for GPU purposes
+        if sparse_dataset is not None:
+            idx += 1
+            if idx % sparse_dataset != 0:
+                continue
+
         # Get all wavs for the current celebrity
         import re
         regex_search = re.search(r'.*/id(.*)/', celeb_id)
@@ -280,6 +290,11 @@ Return X_train, y_train, X_val, y_val and X_test, y_test
     # Now for the test part
     TEST_FOLDER = "datasets/voxceleb1/test/wav/"
     for celeb_id in glob.iglob(os.path.join(TEST_FOLDER, '*/')):
+        # Sparse dataset. Remove some celebs from data for GPU purposes
+        if sparse_dataset is not None:
+            idx += 1
+            if idx % sparse_dataset != 0:
+                continue
         # Get all wavs for the current celebrity
         import re
         regex_search = re.search(r'.*/id(.*)/', celeb_id)
