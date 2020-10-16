@@ -28,3 +28,17 @@ HOP_LENGTH = WINDOW_LENGTH//2  # 50% overlap
 # Folders
 PLOTS_FOLDER = "plotting/plots/"
 REPORTS_FOLDER = 'plotting/reports/'
+
+# Checkpoints
+CHECKPOINT_FOLDER = "checkpoints/"
+CHECKPOINT_FREQ = 100
+CHECKPOINT_MODELNAME = "speaker_verifier"
+
+# Logging
+LOGGING = False
+LOG_FILE = 'checkpoints/log.txt'
+
+# Early Stopping
+PATIENCE = 7
+DELTA = 1e-3
+MODELNAME = "early_stopping.pt"

@@ -1,10 +1,10 @@
 import os
 import sys
 import time
+import math
 from inspect import getsource
 import torch
 from sklearn.metrics import f1_score, accuracy_score
-import math
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,6 +15,7 @@ from sklearn.metrics import confusion_matrix
 from utils import emodb
 from utils import iemocap
 from utils import voxceleb
+from utils.early_stopping import EarlyStopping
 
 from plotting.metrics import plot_confusion_matrix
 from core.config import PLOTS_FOLDER, REPORTS_FOLDER
@@ -28,9 +29,9 @@ def train_and_validate(model,
                        optimizer,
                        epochs,
                        cnn=False,
-                       valid_freq=5,
                        early_stopping=False,
-                       restore=None):
+                       valid_freq=5,
+                       checkpoint_freq=config.CHECKPOINT_FREQ):
     """
     Trains the given `model`.
     Then validates every `valid_freq`.
@@ -42,9 +43,6 @@ def train_and_validate(model,
 
     print(next(iter(train_loader)))
 
-    EPOCHS = epochs
-    valid_freq = valid_freq
-
     # Store losses, models
     all_accuracy_training = []
     all_accuracy_validation = []
@@ -54,12 +52,26 @@ def train_and_validate(model,
     best_model_epoch = 0
     min_loss = 0
 
-    # Iterate for EPOCHS
-    for epoch in range(1, EPOCHS + 1):
+    # Early stopping
+    if early_stopping is not False:
+        modelpath = os.path.join(config.CHECKPOINT_FOLDER, config.MODELNAME)
+        early_stopping = EarlyStopping(patience=config.PATIENCE,
+                                       delta=config.DELTA,
+                                       path=modelpath)
+
+    # ========= TRAIN & VALIDATION ================
+    for epoch in range(1, epochs + 1):
+
+        # Checkpoint
+        if epoch % checkpoint_freq == 0:
+            modelname = f"{config.CHECKPOINT_MODELNAME}_{epoch}_epoch_checkpoint.pt"
+            modelpath = os.path.join(config.CHECKPOINT_FOLDER, modelname)
+            torch.save(model, modelpath)
 
         # ===== Training HERE =====
         train_loss, train_acc = train(epoch, train_loader, model,
                                       loss_function, optimizer, cnn=cnn)
+
         # Store statistics for later usage
         all_train_loss.append(train_loss)
         all_accuracy_training.append(train_acc)
@@ -68,65 +80,35 @@ def train_and_validate(model,
         if epoch % valid_freq == 0:
             valid_loss, valid_acc = validate(epoch, valid_loader,
                                              model, loss_function, cnn=cnn)
-            if config.logging is True:
-                with open(config.log_file, mode='a') as f:
-                    mesg = f"{time.ctime}\tEpoch:{epoch}\tLoss:{valid_loss}\n"
-                    f.write(mesg)
-
-            # Find best model
-            if best_model is None:
-                # Initialize
-                # Store model but on cpu
-                best_model = deepcopy(model).to('cpu')
-                best_model_epoch = 5
-                # Save new minimum
-                min_loss = valid_loss
-            # New model with lower loss
-            elif valid_loss < min_loss:
-                # Update loss
-                min_loss = valid_loss
-                # Update best model, store on cpu
-                best_model = deepcopy(model).to('cpu')
-                best_model_epoch = epoch
 
             # Store statistics for later usage
             all_valid_loss.append(valid_loss)
             all_accuracy_validation.append(valid_acc)
 
-        # Make sure enough epochs have passed
-        if epoch < 4 * valid_freq:
-            continue
+            # logging on file
+            if config.LOGGING is True:
+                if not os.path.exists(config.LOG_FILE):
+                    os.makedirs(config.LOG_FILE, exist_ok=True)
+                with open(config.LOG_FILE, mode='a') as file:
+                    mesg = f"{time.ctime}\tEpoch:{epoch}\tLoss:{valid_loss}\n"
+                    file.write(mesg)
 
-        # Early stopping enabled?
-        if early_stopping is False:
-            continue
-        # If enabled do everything needed
-        STOP = True
-
-        # If validation loss is ascending two times in a row exit training
-        if (all_valid_loss[-1] >= all_valid_loss[-2]) and (all_valid_loss[-2] >= all_valid_loss[-3]):
-            print(f'\nIncreasing loss..')
-            print(f'\nResetting model to epoch {best_model_epoch}.')
-            # Remove unnessesary model
-            model.to('cpu')
-            best_model = best_model.to(device)
-            # Exit 2 loops at the same time, go to testing
-            return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
-
-        # Small change in loss
-        if (abs(all_valid_loss[-1] - all_valid_loss[-2]) < 1e-3 and
-                abs(all_valid_loss[-2] - all_valid_loss[-3]) < 1e-3):
-            print(f'\nVery small change in loss..')
-            print(f'\nResetting model to epoch {best_model_epoch}.')
-            # Remove unnessesary model
-            model.to('cpu')
-            best_model = best_model.to(device)
-            # Exit 2 loops at the same time, go to testing
-            return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
+            # Early Stopping
+            if early_stopping is not False:
+                early_stopping(val_loss=valid_loss, model=model)
+                if early_stopping.early_stop is True:
+                    # Remove unused data from GPU
+                    del model
+                    # Load best stored model, so far
+                    best_model = early_stopping.restore_best_model.to(device)
+                    return [best_model,
+                            all_train_loss, all_valid_loss,
+                            all_accuracy_training, all_accuracy_validation,
+                            epoch]
 
     print(f'\nTraining exited normally at epoch {epoch}.')
     # Remove unnessesary model
-    model.to('cpu')
+    del model
     best_model = best_model.to(device)
     return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
 
@@ -450,14 +432,12 @@ def overfit(model,
 
     print(next(iter(train_loader)))
 
-    EPOCHS = epochs
-
     # Store losses, models
     all_train_loss = []
     models = []
 
-    # Iterate for EPOCHS
-    for epoch in range(1, EPOCHS + 1):
+    # Iterate for epochs
+    for epoch in range(1, epochs + 1):
 
         # ===== Training HERE =====
         train_loss = train(epoch, train_loader, model,
