@@ -1,11 +1,12 @@
-import torch
-from torch.nn import functional as F
 import os
 import sys
+import time
+from inspect import getsource
+import torch
+from sklearn.metrics import f1_score, accuracy_score
 import math
 from copy import deepcopy
 import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 # Report metrics
 from sklearn.metrics import classification_report
@@ -15,10 +16,9 @@ from utils import emodb
 from utils import iemocap
 from utils import voxceleb
 
-from sklearn.metrics import f1_score, accuracy_score
-from inspect import getsource
 from plotting.metrics import plot_confusion_matrix
 from core.config import PLOTS_FOLDER, REPORTS_FOLDER
+from core import config
 
 
 def train_and_validate(model,
@@ -28,11 +28,12 @@ def train_and_validate(model,
                        optimizer,
                        epochs,
                        cnn=False,
-                       cross_validation_epochs=5,
-                       early_stopping=False):
+                       valid_freq=5,
+                       early_stopping=False,
+                       restore=None):
     """
     Trains the given `model`.
-    Then validates every `cross_validation_epochs`.
+    Then validates every `valid_freq`.
     Returns: `best_model` containing the model with best parameters.
     """
 
@@ -42,7 +43,7 @@ def train_and_validate(model,
     print(next(iter(train_loader)))
 
     EPOCHS = epochs
-    CROSS_VALIDATION_EPOCHS = cross_validation_epochs
+    valid_freq = valid_freq
 
     # Store losses, models
     all_accuracy_training = []
@@ -64,9 +65,13 @@ def train_and_validate(model,
         all_accuracy_training.append(train_acc)
 
         # ====== VALIDATION HERE ======
-        if epoch % CROSS_VALIDATION_EPOCHS == 0:
+        if epoch % valid_freq == 0:
             valid_loss, valid_acc = validate(epoch, valid_loader,
                                              model, loss_function, cnn=cnn)
+            if config.logging is True:
+                with open(config.log_file, mode='a') as f:
+                    mesg = f"{time.ctime}\tEpoch:{epoch}\tLoss:{valid_loss}\n"
+                    f.write(mesg)
 
             # Find best model
             if best_model is None:
@@ -89,7 +94,7 @@ def train_and_validate(model,
             all_accuracy_validation.append(valid_acc)
 
         # Make sure enough epochs have passed
-        if epoch < 4 * CROSS_VALIDATION_EPOCHS:
+        if epoch < 4 * valid_freq:
             continue
 
         # Early stopping enabled?
@@ -436,7 +441,7 @@ def overfit(model,
             cnn=False):
     """
     Trains the given <model>.
-    Then validates every <cross_validation_epochs>.
+    Then validates every <valid_freq>.
     Returns: <best_model> containing the model with best parameters.
     """
 
@@ -463,3 +468,20 @@ def overfit(model,
             print(f'\nEpoch {epoch} loss: {train_loss}')
 
     return model, all_train_loss, epoch
+
+
+def deterministic_model(deterministic=False):
+    """Set randomness to zero."""
+    import torch
+    import numpy as np
+    import random
+    print(f"Deterministic Model: {deterministic}")
+    if deterministic is True:
+        np.random.seed(0)
+        random.seed(0)
+        torch.manual_seed(0)
+        torch.cuda.manual_seed(0)
+        torch.cuda.manual_seed_all(0)
+        torch.backends.cudnn.enabled = False
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
