@@ -13,7 +13,8 @@ class VoxcelebDataset(Dataset):
     def __init__(self, X, y,
                  feature_extraction_method="MFCC",
                  oversampling=False,
-                 fixed_length=True):
+                 fixed_length=True,
+                 max_seq_len=None):
         """Create all important variables for dataset tokenization
 
         Arguments:
@@ -24,6 +25,11 @@ class VoxcelebDataset(Dataset):
         """
         self.feature_extraction_method = feature_extraction_method
         self.fixed_length = fixed_length
+        self.max_seq_len = max_seq_len
+
+        # Make sure there is max_seq_len
+        if max_seq_len is None:
+            raise AssertionError()
 
         if oversampling is True:
             ros = RandomOverSampler()
@@ -38,9 +44,6 @@ class VoxcelebDataset(Dataset):
             X_parsed = [iemocap.parse_wav(x) for x in X]
             # Get spectrogram
             X = [sound_processing.get_melspectrogram(x) for x in X_parsed]
-            # (features,seq_len) -> (seq_len,features)
-            # X = [np.swapaxes(x, 0, 1) for x in X_parsed]
-            sound_processing.preview_melspectrogram(X[1])
 
         elif feature_extraction_method == "MFCC":
             # Get file read using librosa
@@ -109,7 +112,7 @@ class VoxcelebDataset(Dataset):
             return padded
 
         elif self.feature_extraction_method == "MEL_SPECTROGRAM":
-            max_length = 342  # 320  # 998  # self.lengths.max()
+            max_length = self.max_seq_len  # 320  # 998  # self.lengths.max()
 
             feature_dim = X[0].shape[-1]
             padded = np.zeros((len(X), max_length, feature_dim))
