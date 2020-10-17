@@ -22,97 +22,6 @@ from core.config import PLOTS_FOLDER, REPORTS_FOLDER
 from core import config
 
 
-def train_and_validate(model,
-                       train_loader,
-                       valid_loader,
-                       loss_function,
-                       optimizer,
-                       epochs,
-                       cnn=False,
-                       early_stopping=False,
-                       valid_freq=5,
-                       checkpoint_freq=config.CHECKPOINT_FREQ):
-    """
-    Trains the given `model`.
-    Then validates every `valid_freq`.
-    Returns: `best_model` containing the model with best parameters.
-    """
-
-    # obtain the model's device ID
-    device = next(model.parameters()).device
-
-    print(next(iter(train_loader)))
-
-    # Store losses, models
-    all_accuracy_training = []
-    all_accuracy_validation = []
-    all_train_loss = []
-    all_valid_loss = []
-    best_model = None
-    best_model_epoch = 0
-    min_loss = 0
-
-    # Early stopping
-    if early_stopping is not False:
-        modelpath = os.path.join(config.CHECKPOINT_FOLDER, config.MODELNAME)
-        early_stopping = EarlyStopping(patience=config.PATIENCE,
-                                       delta=config.DELTA,
-                                       path=modelpath)
-
-    # ========= TRAIN & VALIDATION ================
-    for epoch in range(1, epochs + 1):
-
-        # Checkpoint
-        if epoch % checkpoint_freq == 0:
-            modelname = f"{config.CHECKPOINT_MODELNAME}_{epoch}_epoch_checkpoint.pt"
-            modelpath = os.path.join(config.CHECKPOINT_FOLDER, modelname)
-            torch.save(model, modelpath)
-
-        # ===== Training HERE =====
-        train_loss, train_acc = train(epoch, train_loader, model,
-                                      loss_function, optimizer, cnn=cnn)
-
-        # Store statistics for later usage
-        all_train_loss.append(train_loss)
-        all_accuracy_training.append(train_acc)
-
-        # ====== VALIDATION HERE ======
-        if epoch % valid_freq == 0:
-            valid_loss, valid_acc = validate(epoch, valid_loader,
-                                             model, loss_function, cnn=cnn)
-
-            # Store statistics for later usage
-            all_valid_loss.append(valid_loss)
-            all_accuracy_validation.append(valid_acc)
-
-            # logging on file
-            if config.LOGGING is True:
-                if not os.path.exists(config.LOG_FILE):
-                    os.makedirs(config.LOG_FILE, exist_ok=True)
-                with open(config.LOG_FILE, mode='a') as file:
-                    mesg = f"{time.ctime}\tEpoch:{epoch}\tLoss:{valid_loss}\n"
-                    file.write(mesg)
-
-            # Early Stopping
-            if early_stopping is not False:
-                early_stopping(val_loss=valid_loss, model=model)
-                if early_stopping.early_stop is True:
-                    # Remove unused data from GPU
-                    del model
-                    # Load best stored model, so far
-                    best_model = early_stopping.restore_best_model.to(device)
-                    return [best_model,
-                            all_train_loss, all_valid_loss,
-                            all_accuracy_training, all_accuracy_validation,
-                            epoch]
-
-    print(f'\nTraining exited normally at epoch {epoch}.')
-    # Remove unnessesary model
-    del model
-    best_model = best_model.to(device)
-    return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
-
-
 def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
     # Set model to train mode
     model.train()
@@ -143,8 +52,6 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
             inputs = inputs[:, np.newaxis, :, :]
             y_pred = model.forward(inputs)
 
-        # print(f'\ny_preds={y_pred}')
-        # print(f'\nlabels={labels}')
         # Compute loss: L = loss_function(y', y)
         loss = loss_function(y_pred, labels)
 
@@ -228,6 +135,97 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
         accuracy = correct / len(dataloader.dataset) * 100
 
     return valid_loss / len(dataloader.dataset), accuracy
+
+
+def train_and_validate(model,
+                       train_loader,
+                       valid_loader,
+                       loss_function,
+                       optimizer,
+                       epochs,
+                       cnn=False,
+                       early_stopping=False,
+                       valid_freq=5,
+                       checkpoint_freq=config.CHECKPOINT_FREQ,
+                       train_func=train,
+                       validate_func=validate):
+    """
+    Trains the given `model`.
+    Then validates every `valid_freq`.
+    Returns: `best_model` containing the model with best parameters.
+    """
+
+    # obtain the model's device ID
+    device = next(model.parameters()).device
+
+    # print(next(iter(train_loader)))
+
+    # Store losses, models
+    all_accuracy_training = []
+    all_accuracy_validation = []
+    all_train_loss = []
+    all_valid_loss = []
+    best_model = None
+
+    # Early stopping
+    if early_stopping is not False:
+        modelpath = os.path.join(config.CHECKPOINT_FOLDER, config.MODELNAME)
+        early_stopping = EarlyStopping(patience=config.PATIENCE,
+                                       delta=config.DELTA,
+                                       path=modelpath)
+
+    # ========= TRAIN & VALIDATION ================
+    for epoch in range(1, epochs + 1):
+
+        # Checkpoint
+        if epoch % checkpoint_freq == 0:
+            modelname = f"{config.CHECKPOINT_MODELNAME}_{epoch}_epoch_checkpoint.pt"
+            modelpath = os.path.join(config.CHECKPOINT_FOLDER, modelname)
+            torch.save(model, modelpath)
+
+        # ===== Training HERE =====
+        train_loss, train_acc = train_func(epoch, train_loader, model,
+                                           loss_function, optimizer, cnn=cnn)
+
+        # Store statistics for later usage
+        all_train_loss.append(train_loss)
+        all_accuracy_training.append(train_acc)
+
+        # ====== VALIDATION HERE ======
+        if epoch % valid_freq == 0:
+            valid_loss, valid_acc = validate_func(epoch, valid_loader,
+                                                  model, loss_function, cnn=cnn)
+
+            # Store statistics for later usage
+            all_valid_loss.append(valid_loss)
+            all_accuracy_validation.append(valid_acc)
+
+            # logging on file
+            if config.LOGGING is True:
+                if not os.path.exists(config.LOG_FILE):
+                    os.makedirs(config.LOG_FILE, exist_ok=True)
+                with open(config.LOG_FILE, mode='a') as file:
+                    mesg = f"{time.ctime}\tEpoch:{epoch}\tLoss:{valid_loss}\n"
+                    file.write(mesg)
+
+            # Early Stopping
+            if early_stopping is not False:
+                early_stopping(val_loss=valid_loss, model=model)
+                if early_stopping.early_stop is True:
+                    # Remove unused data from GPU
+                    del model
+                    # Load best stored model, so far
+                    best_model = early_stopping.restore_best_model().to(device)
+                    return [best_model,
+                            all_train_loss, all_valid_loss,
+                            all_accuracy_training, all_accuracy_validation,
+                            epoch]
+
+    print(f'\nTraining exited normally at epoch {epoch}.')
+    # Remove unnessesary model
+    del model
+    best_model = best_model.to(device)
+    return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
 
 
 def test(model, dataloader, cnn=False):
