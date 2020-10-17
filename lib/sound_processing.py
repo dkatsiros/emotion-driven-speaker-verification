@@ -166,3 +166,41 @@ def compute_sequence_length_distribution(X=None, n_bins=10, plots=False):
     print(f"Total information: {len(list(information))/len(lengths) *100:0.2f}\
 % by lowering max_sequence_length from {max_seq} to {upper_limit}")
     return upper_limit
+
+
+def mfccs_and_spec(wav_file, wav_process=False, calc_mfccs=False, calc_mag_db=False):
+    sr = 16000
+    nfft = 512  # For mel spectrogram preprocess
+    window = 0.025  # (s)
+    hop = 0.01  # (s)
+    nmels = 40  # Number of mel energies
+    tisv_frame = 180  # Max number of time steps in input after preprocess
+    sound_file, _ = librosa.core.load(wav_file, sr=sr)
+    window_length = int(window*sr)
+    hop_length = int(hop*sr)
+    duration = tisv_frame * hop + window
+
+    # Cut silence and fix length
+    if wav_process == True:
+        sound_file, index = librosa.effects.trim(
+            sound_file, frame_length=window_length, hop_length=hop_length)
+        length = int(sr * duration)
+        sound_file = librosa.util.fix_length(sound_file, length)
+
+    spec = librosa.stft(sound_file, n_fft=nfft,
+                        hop_length=hop_length, win_length=window_length)
+    mag_spec = np.abs(spec)
+
+    mel_basis = librosa.filters.mel(
+        sr, nfft, n_mels=nmels)
+    mel_spec = np.dot(mel_basis, mag_spec)
+
+    mag_db = librosa.amplitude_to_db(mag_spec)
+    # db mel spectrogram
+    mel_db = librosa.amplitude_to_db(mel_spec).T
+
+    mfccs = None
+    if calc_mfccs:
+        mfccs = np.dot(librosa.filters.dct(40, mel_db.shape[0]), mel_db).T
+
+    return mfccs, mel_db, mag_db

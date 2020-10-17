@@ -29,16 +29,30 @@ HOP_LENGTH = WINDOW_LENGTH//2  # 50% overlap
 PLOTS_FOLDER = "plotting/plots/"
 REPORTS_FOLDER = 'plotting/reports/'
 
-# Checkpoints
+
+# Checkpoints & logging
 CHECKPOINT_FOLDER = "checkpoints/"
 CHECKPOINT_FREQ = 100
 CHECKPOINT_MODELNAME = "speaker_verifier"
-
-# Logging
-LOGGING = False
+LOGGING = True
 LOG_FILE = 'checkpoints/log.txt'
+
+# Model
+PROJ = 256
 
 # Early Stopping
 PATIENCE = 7
 DELTA = 1e-3
 MODELNAME = "early_stopping.pt"
+
+# Training
+EPOCHS = 10
+LEARNING_RATE = 1e-5
+VALID_FREQ = 1
+CNN_BOOLEAN = True
+
+# Dataloading / Speakers
+NUM_WORKERS = 8
+SPEAKER_N = 5
+SPEAKER_M = 4
+TOTAL_UTTERANCES_PER_SPEAKER = 40

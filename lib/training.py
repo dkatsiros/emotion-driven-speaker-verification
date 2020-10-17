@@ -3,11 +3,12 @@ import sys
 import time
 import math
 from inspect import getsource
+import logging
+
+import numpy as np
 import torch
 from sklearn.metrics import f1_score, accuracy_score
-from copy import deepcopy
 import matplotlib.pyplot as plt
-import numpy as np
 # Report metrics
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
@@ -181,11 +182,16 @@ def train_and_validate(model,
         if epoch % checkpoint_freq == 0:
             modelname = f"{config.CHECKPOINT_MODELNAME}_{epoch}_epoch_checkpoint.pt"
             modelpath = os.path.join(config.CHECKPOINT_FOLDER, modelname)
-            torch.save(model, modelpath)
+            torch.save(model.eval().cpu(), modelpath)
+            model.to(device)
 
         # ===== Training HERE =====
         train_loss, train_acc = train_func(epoch, train_loader, model,
                                            loss_function, optimizer, cnn=cnn)
+
+        # log training results
+        mesg = f"{time.ctime()}\tEpoch:{epoch}\tTraining Loss:{train_loss}\n"
+        logging.info(mesg)
 
         # Store statistics for later usage
         all_train_loss.append(train_loss)
@@ -202,20 +208,23 @@ def train_and_validate(model,
 
             # logging on file
             if config.LOGGING is True:
-                if not os.path.exists(config.LOG_FILE):
-                    os.makedirs(config.LOG_FILE, exist_ok=True)
-                with open(config.LOG_FILE, mode='a') as file:
-                    mesg = f"{time.ctime}\tEpoch:{epoch}\tLoss:{valid_loss}\n"
-                    file.write(mesg)
+                # with open(config.LOG_FILE, mode='a') as file:
+                # file.write(mesg)
+                mesg = f"{time.ctime()}\tEpoch:{epoch}\t Validation Loss:{valid_loss}\n"
+                logging.info(mesg)
 
             # Early Stopping
             if early_stopping is not False:
+                # Move model to CPU
                 early_stopping(val_loss=valid_loss, model=model)
+                # Back to GPU
+                model.to(device)
                 if early_stopping.early_stop is True:
                     # Remove unused data from GPU
                     del model
                     # Load best stored model, so far
                     best_model = early_stopping.restore_best_model().to(device)
+                    print(f"Restored best model from {early_stopping.path}")
                     return [best_model,
                             all_train_loss, all_valid_loss,
                             all_accuracy_training, all_accuracy_validation,
@@ -224,7 +233,7 @@ def train_and_validate(model,
     print(f'\nTraining exited normally at epoch {epoch}.')
     # Remove unnessesary model
     del model
-    best_model = best_model.to(device)
+    best_model = model.to(device)
     return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
 
 
