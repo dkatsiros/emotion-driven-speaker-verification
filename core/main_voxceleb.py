@@ -1,138 +1,181 @@
-import numpy as np
-import time
-from copy import deepcopy
-import torch
-from torch import optim
-from utils.load_dataset import load_VoxCeleb
-from dataloading.voxceleb import VoxcelebDataset
-from torch.utils.data import DataLoader
-from torch.nn import functional as F
-
-from models.lstm import LSTM
-from models.cnn3 import CNN3
-from lib.training import train_and_validate, test, results, overfit
-from lib.sound_processing import compute_max_sequence_length, compute_sequence_length_distribution
-# progress, fit, print_results
-from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
+"""Exploiting GE2E Loss in a try to reduce EER on speaker verification. Dataset: Voxceleb 1"""
+# System imports
 import os
-import joblib
 import random
-from plotting.class_stats import dataloader_stats, samples_lengths
+import time
+import logging
+
+# External imports
+import torch
+from torch.utils.data import DataLoader
+import glob2 as glob
+from tqdm import tqdm
+
+# Relative imports
+import config
+from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
+from lib.loss import GE2ELoss
+from lib.sound_processing import compute_max_sequence_length, compute_sequence_length_distribution
+from lib.training import train_and_validate, test, results, overfit
+from lib.training import deterministic_model
+from models.SpeechEmbedder import CNNSpeechEmbedder
+from dataloading.voxceleb import Voxceleb1
+from utils.load_dataset import load_VoxCeleb
 
 
-# Deterministic ?
-if DETERMINISTIC is True:
-    np.random.seed(0)
-    random.seed(0)
-    torch.manual_seed(0)
-    torch.cuda.manual_seed(0)
-    torch.cuda.manual_seed_all(0)
-    torch.backends.cudnn.enabled = False
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
+def train_se(e, dataloader, model, loss_function, optimizer, *args, **kwargs):
+    """Training function for speaker embedder."""
+    model.train()
+    training_loss = 0.0
 
+    for batch in tqdm(dataloader, desc=f"Training Epoch {e}"):
+        batch = batch.to(device)
+
+        batch = torch.reshape(batch,
+                              (config.SPEAKER_N*config.SPEAKER_M, 1, batch.size(2), batch.size(3)))
+        perm = random.sample(range(0, config.SPEAKER_N*config.SPEAKER_M),
+                             config.SPEAKER_N*config.SPEAKER_M)
+        unperm = list(perm)
+        for i, j in enumerate(perm):
+            unperm[j] = i
+        batch = batch[perm]
+        # gradient accumulates
+        optimizer.zero_grad()
+
+        embeddings = model(batch)
+        embeddings = embeddings[unperm]
+        embeddings = torch.reshape(embeddings,
+                                   (config.SPEAKER_N, config.SPEAKER_M, embeddings.size(1)))
+
+        # get loss, call backward, step optimizer
+        # wants (Speaker, Utterances, embedding)
+        loss = loss_function(embeddings)
+        training_loss += loss.item()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 3.0)
+        torch.nn.utils.clip_grad_norm_(loss_function.parameters(), 1.0)
+        optimizer.step()
+    return training_loss / len(dataloader.dataset), None
+
+
+def validate_se(e, dataloader, model, loss_function, *args, **kwargs):
+    """Validation function for speaker embedder."""
+    model.eval()
+    validation_loss = 0.0
+
+    for batch in tqdm(dataloader, desc=f"Validation Epoch {e}"):
+        batch = batch.to(device)
+
+        batch = torch.reshape(batch,
+                              (config.SPEAKER_N*config.SPEAKER_M, 1, batch.size(2), batch.size(3)))
+        perm = random.sample(range(0, config.SPEAKER_N*config.SPEAKER_M),
+                             config.SPEAKER_N*config.SPEAKER_M)
+        unperm = list(perm)
+        for i, j in enumerate(perm):
+            unperm[j] = i
+        batch = batch[perm]
+        embeddings = model(batch)
+        embeddings = embeddings[unperm]
+        embeddings = torch.reshape(embeddings,
+                                   (config.SPEAKER_N, config.SPEAKER_M, embeddings.size(1)))
+
+        # get loss, call backward, step optimizer
+        # wants (Speaker, Utterances, embedding)
+        loss = loss_function(embeddings)
+        validation_loss += loss.item()
+
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 3.0)
+        torch.nn.utils.clip_grad_norm_(loss_function.parameters(), 1.0)
+    return validation_loss / len(dataloader.dataset), None
+
+
+# Create all folders
+dirs = [config.CHECKPOINT_FOLDER]
+list(map(lambda x: os.makedirs(x, exist_ok=True), dirs))
+deterministic_model(deterministic=False)
 
 # Split dataset to arrays
-X_train, y_train, X_test, y_test, X_eval, y_eval = load_VoxCeleb()
+train_speakers, test_speakers, validation_speakers = load_VoxCeleb(val_ratio=.05,
+                                                                   validation=True)
+# lengths = []
+# list(map(lambda sp: lengths.extend(glob.glob(sp + '/*/*.wav')),
+#          train_speakers+validation_speakers))
 
-# max_seq_len = compute_max_sequence_length(X=X_train+X_eval)
-max_seq_len = compute_sequence_length_distribution(X=X_train+X_eval)
+# max_seq_len = compute_sequence_length_distribution(X=lengths)
 
-# PyTorch
+print("Total information: 97.97 % by lowering max_sequence_length from 1450 to 245")
+max_seq_len = 245
+
+# PyTorch Settings
 BATCH_SIZE = 16  # len(X_train) // 20
 print(f'Selected Batch Size: {BATCH_SIZE}')
-EPOCHS = 500
+fe_method = "MEL_SPECTROGRAM" if config.CNN_BOOLEAN is True else "MFCC"
 
-CNN_BOOLEAN = True
+# Training dataloader
 
-# Load sets using dataset class
-train_set = VoxcelebDataset(X_train, y_train, oversampling=True,
-                            feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
+train_dataset = Voxceleb1(X=train_speakers,
+                          training=True,
+                          fe_method=fe_method,
+                          max_seq_len=max_seq_len)
+train_loader = DataLoader(train_dataset, batch_size=config.SPEAKER_N,
+                          shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
+# Validation dataloader
+validation_dataset = Voxceleb1(X=validation_speakers,
+                               validation=True,
+                               fe_method=fe_method,
+                               max_seq_len=max_seq_len)
+validation_loader = DataLoader(validation_dataset, batch_size=config.SPEAKER_N,
+                               shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
 
-test_set = VoxcelebDataset(
-    X_test, y_test, feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
-
-eval_set = VoxcelebDataset(
-    X_eval, y_eval, feature_extraction_method="MEL_SPECTROGRAM" if CNN_BOOLEAN is True else "MFCC")
-
-
-# PyTorch DataLoader
-
-train_loader = DataLoader(
-    train_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-dataloader_stats(train_loader, filename='train_loader_statistics.png')
-
-test_loader = DataLoader(
-    test_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-
-dataloader_stats(test_loader, filename='test_loader_statistics.png')
-
-valid_loader = DataLoader(
-    eval_set, batch_size=BATCH_SIZE, num_workers=4, drop_last=True, shuffle=True)
-
-dataloader_stats(valid_loader, filename='valid_loader_statistics.png')
-
-# Print sequence length diagram for samples
-# samples_lengths(dataloaders=[train_loader, valid_loader])
 
 # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f'Running on: {device}.\n')
 
-# Create a model
-# model = LSTM(input_size=39, hidden_size=6, output_size=7, num_layers=3,
-#              bidirectional=True, dropout=0.2)
-
-model = CNN3(output_dim=7)
-print(f'Model Parameters: {model.count_parameters(model)}')
-
-# move model weights to device
-model.to(device)
+# #speakers # utterances, maxseqlen, melspectr_dim
+N, M, width, height = next(iter(train_loader)).size()
+# Set model and move to device
+model = CNNSpeechEmbedder(height=height,
+                          width=width).to(device)
+logging.basicConfig(filename=config.LOG_FILE, level=logging.INFO)
+print(f'Model Parameters: {model.count_parameters()}')
 print(model)
-
 
 #############################################################################
 # Training Pipeline
 #############################################################################
 
-print(next(iter(train_loader)))
 # Regularization parameters
-learning_rate = 1e-5
 L2 = 0
 # Loss and optimizer
-loss_function = torch.nn.CrossEntropyLoss()
-# optimizer = torch.optim.Adadelta(
-#     model.parameters(), rho=0.9, weight_decay=L2)  # eps = 1e-06
-# optimizer = torch.optim.SGD(params=model.parameters(
-# ), lr=learning_rate, momentum=0.9, weight_decay=L2)
-# optimizer = torch.optim.Adam(model.parameters(), weight_decay=L2)
-optimizer = torch.optim.AdamW(model.parameters(), weight_decay=0.02)
-CROSS_VALIDATION_EPOCHS = 5
+loss_function = GE2ELoss(device=device)
+optimizer = torch.optim.AdamW([
+    {'params': model.parameters()},
+    {'params': loss_function.parameters()}
+], weight_decay=0.02)
 
-# Test overfit
-# model, all_train_loss, epoch = overfit(model,
-#                                       train_loader,
-#                                       loss_function,
-#                                       optimizer,
-#                                       epochs=EPOCHS,
-#                                       cnn=CNN_BOOLEAN)
-# exit()
-best_model, train_losses, valid_losses, train_accuracy, valid_accuracy, _epochs = train_and_validate(model=model,
-                                                                                                     train_loader=train_loader,
-                                                                                                     valid_loader=valid_loader,
-                                                                                                     loss_function=loss_function,
-                                                                                                     optimizer=optimizer,
-                                                                                                     epochs=EPOCHS,
-                                                                                                     cnn=CNN_BOOLEAN,
-                                                                                                     cross_validation_epochs=5,
-                                                                                                     early_stopping=True)
 
+[best_model, train_losses,
+ valid_losses, train_accuracy,
+ valid_accuracy, _epochs] = train_and_validate(model=model,
+                                               train_loader=train_loader,
+                                               valid_loader=validation_loader,
+                                               loss_function=loss_function,
+                                               optimizer=optimizer,
+                                               epochs=config.EPOCHS,
+                                               cnn=config.CNN_BOOLEAN,
+                                               valid_freq=config.VALID_FREQ,
+                                               early_stopping=True,
+                                               train_func=train_se,
+                                               validate_func=validate_se)
+
+exit()
 timestamp = time.ctime()
 
 modelname = os.path.join(
-    VARIABLES_FOLDER, f'{best_model.__class__.__name__}_{_epochs}_{timestamp}.pkl')
+    VARIABLES_FOLDER, f'{best_model.__class__.__name__}_{_epochs}_{timestamp}.pt')
 # Save model for later use
-joblib.dump(best_model, modelname)
+torch.save(best_model, modelname)
 # ===== TEST =====
 y_pred, y_true = test(best_model, test_loader, cnn=CNN_BOOLEAN)
 # ===== RESULTS =====
@@ -140,4 +183,4 @@ results(model=best_model, optimizer=optimizer, loss_function=loss_function,
         train_loss=train_losses, valid_loss=valid_losses,
         train_accuracy=train_accuracy, valid_accuracy=valid_accuracy,
         y_pred=y_pred, y_true=y_true, epochs=_epochs,
-        cv=CROSS_VALIDATION_EPOCHS, timestamp=timestamp)
+        cv=validation_epochs, timestamp=timestamp)

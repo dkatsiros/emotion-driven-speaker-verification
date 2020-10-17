@@ -55,6 +55,6 @@ class EarlyStopping:
         torch.save(model.eval().cpu(), self.path)
         self.val_loss_min = val_loss
 
-    def restore_best_model():
+    def restore_best_model(self,):
         """Return the best model saved."""
         return torch.load(self.path)

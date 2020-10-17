@@ -238,14 +238,12 @@ def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_
     return X_train, y_train, X_test, y_test, X_val, y_val
 
 
-def load_VoxCeleb(val_ratio=0.05, validation=True, oversampling=True, sparse_dataset=None):
+def load_VoxCeleb(val_ratio=0.05, validation=True):
     """
-Return X_train, y_train, X_val, y_val and X_test, y_test
+Return train_speakers, validation_speakers and test_speakers.
 ** `test_ratio` is fixed, unlike other datasets above. 
-`sparse_dataset` : Keep only  `i` mod `sparse_dataset` elements.
-                as a result len(X) = len(X)/sparse_dataset.
 """
-    idx = -1
+    from random import shuffle
 
     # Initialize
     X_train_, y_train_ = [], []
@@ -253,60 +251,19 @@ Return X_train, y_train, X_val, y_val and X_test, y_test
     X_train, y_train = [], []
     X_val, y_val = [], []
 
-    TRAIN_FOLDER = "datasets/voxceleb1/wav/"
-    for celeb_id in glob.iglob(os.path.join(TRAIN_FOLDER, '*/')):
-        # Sparse dataset. Remove some celebs from data for GPU purposes
-        if sparse_dataset is not None:
-            idx += 1
-            if idx % sparse_dataset != 0:
-                continue
-
-        # Get all wavs for the current celebrity
-        import re
-        regex_search = re.search(r'.*/id(.*)/', celeb_id)
-        celeb_id_int = int(regex_search.group(1))
-
-        for wav in glob.iglob(os.path.join(celeb_id, '*/*.wav')):
-            # Add file path to train
-            X_train_.append(wav)
-            # Add label / id
-            y_train_.append(celeb_id_int)
-
-    if validation is True:
-        # If valuation is True split again
-        sss = StratifiedShuffleSplit(n_splits=1, test_size=val_ratio)
-        train_idx, val_idx = next(sss.split(X_train_, y_train_))
-        # Train after both splits
-        for idx in train_idx:
-            X_train.append(X_train_[idx])
-            y_train.append(y_train_[idx])
-        # validation
-        for idx in val_idx:
-            X_val.append(X_train_[idx])
-            y_val.append(y_train_[idx])
-    else:
-        X_train, y_train = X_train_, y_train_
-
-    # Now for the test part
+    TRAIN_FOLDER = "datasets/voxceleb1/train/wav/"
     TEST_FOLDER = "datasets/voxceleb1/test/wav/"
-    for celeb_id in glob.iglob(os.path.join(TEST_FOLDER, '*/')):
-        # Sparse dataset. Remove some celebs from data for GPU purposes
-        if sparse_dataset is not None:
-            idx += 1
-            if idx % sparse_dataset != 0:
-                continue
-        # Get all wavs for the current celebrity
-        import re
-        regex_search = re.search(r'.*/id(.*)/', celeb_id)
-        celeb_id_int = int(regex_search.group(1))
 
-        for wav in glob.iglob(os.path.join(celeb_id, '*/*.wav')):
-            # Add file path to train
-            X_test.append(wav)
-            # Add label / id
-            y_test.append(celeb_id_int)
+    # Get all speakers
+    speakers = glob.glob(os.path.join(TRAIN_FOLDER, '*/'))
+    shuffle(speakers)
 
-    if validation is True:
-        return X_train, y_train, X_test, y_test, X_val, y_val
+    # Randomly select `val_ratio` validation speakers
+    test_speakers = glob.glob(os.path.join(TEST_FOLDER, '*/'))
 
-    return X_train, y_train, X_test, y_test
+    if validation is False:
+        return speakers, test_speakers, _
+
+    train_speakers = speakers[:int(len(speakers)*(1-val_ratio))]
+    val_speakers = speakers[:-int(len(speakers)*(1-val_ratio))]
+    return train_speakers, test_speakers, val_speakers
