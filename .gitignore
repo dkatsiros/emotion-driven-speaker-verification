@@ -11,7 +11,11 @@ env/
 # Python
 __pycache__/
 variables/
+checkpoints/
 
 # Plots
 plotting/plots/
 plotting/reports/
+
+# Extra files
+extra/*
