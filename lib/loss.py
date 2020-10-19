@@ -57,9 +57,10 @@ def get_utterance_centroids(embeddings):
     return centroids
 
 
-def get_cossim(embeddings):
-    # simple centroids
-    centroids = get_centroids(embeddings)
+def get_cossim(embeddings, centroids=None):
+    if centroids is None:
+        # simple centroids
+        centroids = get_centroids(embeddings)
     # number of utterances per speaker
     num_utterances = embeddings.shape[1]
     utterance_centroids = get_utterance_centroids(embeddings)

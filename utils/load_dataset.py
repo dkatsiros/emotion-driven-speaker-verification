@@ -262,7 +262,7 @@ Return train_speakers, validation_speakers and test_speakers.
     test_speakers = glob.glob(os.path.join(TEST_FOLDER, '*/'))
 
     if validation is False:
-        return speakers, test_speakers, _
+        return speakers, test_speakers, None
 
     train_speakers = speakers[:int(len(speakers)*(1-val_ratio))]
     val_speakers = speakers[:-int(len(speakers)*(1-val_ratio))]
