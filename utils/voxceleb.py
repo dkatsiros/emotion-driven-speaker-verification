@@ -22,6 +22,3 @@ def get_metadata():
             vox_dict[vox_celeb_id] = {k: v for k,
                                       v in zip(headers[1:], celeb_info[1:])}
         return vox_dict
-
-
-print(get_metadata())
