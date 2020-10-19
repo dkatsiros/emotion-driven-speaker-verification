@@ -130,7 +130,7 @@ loss_function = torch.nn.CrossEntropyLoss()
 # ), lr=learning_rate, momentum=0.9, weight_decay=L2)
 # optimizer = torch.optim.Adam(model.parameters(), weight_decay=L2)
 optimizer = torch.optim.AdamW(model.parameters(), weight_decay=0.02)
-CROSS_VALIDATION_EPOCHS = 5
+valid_freq = 5
 
 # Test overfit
 # model, all_train_loss, epoch = overfit(model,
@@ -147,7 +147,7 @@ best_model, train_losses, valid_losses, train_accuracy, valid_accuracy, _epochs 
                                                                                                      optimizer=optimizer,
                                                                                                      epochs=EPOCHS,
                                                                                                      cnn=CNN_BOOLEAN,
-                                                                                                     cross_validation_epochs=5,
+                                                                                                     valid_freq=5,
                                                                                                      early_stopping=True)
 
 timestamp = time.ctime()
@@ -164,4 +164,4 @@ results(model=best_model, optimizer=optimizer, loss_function=loss_function,
         train_loss=train_losses, valid_loss=valid_losses,
         train_accuracy=train_accuracy, valid_accuracy=valid_accuracy,
         y_pred=y_pred, y_true=y_true, epochs=_epochs,
-        cv=CROSS_VALIDATION_EPOCHS, timestamp=timestamp, dataset=DATASET)
+        cv=valid_freq, timestamp=timestamp, dataset=DATASET)

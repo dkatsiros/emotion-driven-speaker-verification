@@ -236,3 +236,34 @@ def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_
         y_val.append(y_train_[idx])
 
     return X_train, y_train, X_test, y_test, X_val, y_val
+
+
+def load_VoxCeleb(val_ratio=0.05, validation=True):
+    """
+Return train_speakers, validation_speakers and test_speakers.
+** `test_ratio` is fixed, unlike other datasets above. 
+"""
+    from random import shuffle
+
+    # Initialize
+    X_train_, y_train_ = [], []
+    X_test, y_test = [], []
+    X_train, y_train = [], []
+    X_val, y_val = [], []
+
+    TRAIN_FOLDER = "datasets/voxceleb1/train/wav/"
+    TEST_FOLDER = "datasets/voxceleb1/test/wav/"
+
+    # Get all speakers
+    speakers = glob.glob(os.path.join(TRAIN_FOLDER, '*/'))
+    shuffle(speakers)
+
+    # Randomly select `val_ratio` validation speakers
+    test_speakers = glob.glob(os.path.join(TEST_FOLDER, '*/'))
+
+    if validation is False:
+        return speakers, test_speakers, None
+
+    train_speakers = speakers[:int(len(speakers)*(1-val_ratio))]
+    val_speakers = speakers[:-int(len(speakers)*(1-val_ratio))]
+    return train_speakers, test_speakers, val_speakers

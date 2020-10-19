@@ -15,7 +15,7 @@ DATASET_FOLDER = "emodb/wav/"
 
 # Stored variables
 VARIABLES_FOLDER = "variables/"
-DETERMINISTIC = True
+DETERMINISTIC = False
 RECOMPUTE = True
 
 # Sampling process
@@ -28,3 +28,43 @@ HOP_LENGTH = WINDOW_LENGTH//2  # 50% overlap
 # Folders
 PLOTS_FOLDER = "plotting/plots/"
 REPORTS_FOLDER = 'plotting/reports/'
+
+
+####################################################
+# Training
+####################################################
+# Core
+######
+TRAINING = False
+RESTORE_FROM_PREVIOUS_MODEL = True
+MODEL_TO_RESTORE = "/home/dimitris/Downloads/early_stopping2.pt"
+# Learning
+EPOCHS = 900
+BATCH_SIZE = 16
+LEARNING_RATE = 1e-5
+VALID_FREQ = 5
+# Model
+#######
+PROJ = 256
+CNN_BOOLEAN = True
+# Early Stopping
+################
+PATIENCE = 7
+DELTA = 1e-3
+MODELNAME = "early_stopping.pt"
+# Checkpoints & logging
+#######################
+CHECKPOINT_FREQ = 100
+CHECKPOINT_FOLDER = "checkpoints/"
+CHECKPOINT_MODELNAME = "speaker_verifier"
+LOGGING = True
+LOG_FILE = 'checkpoints/log.txt'
+LOG_FILE_TEST = 'checkpoints/log_test.txt'
+
+####################################################
+# PyTorch
+####################################################
+# Dataloading / Speakers
+NUM_WORKERS = 8
+SPEAKER_N = 5
+SPEAKER_M = 4

@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class CNN3(nn.Module):
-    def __init__(self, height, width, output_dim=7, first_channels=32, kernel_size=5):
-        super(CNN1, self).__init__()
+class CNNSpeechEmbedder(nn.Module):
+    def __init__(self, height, width, proj=256, first_channels=32, kernel_size=5):
+        super(CNNSpeechEmbedder, self).__init__()
         self.num_cnn_layers = 3
         self.cnn_channels = 2
         self.height = height
@@ -35,7 +35,7 @@ class CNN3(nn.Module):
 
         self.layer3 = nn.Sequential(
             nn.Conv2d(2*first_channels,
-                      (self.cnn_channels**2) * gfirst_channels,
+                      (self.cnn_channels**2) * first_channels,
                       kernel_size=kernel_size,
                       stride=1,
                       padding=2),
@@ -52,20 +52,12 @@ class CNN3(nn.Module):
 
         self.linear_layer2 = nn.Sequential(
             nn.Dropout(0.5),
-            nn.Linear(1024, 256),
-            nn.LeakyReLU()
-        )
-
-        self.linear_layer3 = nn.Sequential(
-            # nn.Dropout(0.2),
-            nn.Linear(256, output_dim),
+            nn.Linear(1024, proj),
             nn.LeakyReLU()
         )
 
     def forward(self, x):
-        # input: (batch_size,1,max_seq,features)
-        # Each layer applies the following matrix tranformation
-        # recursively: (batch_size,conv_output,max_seq/2 -1,features/2 -1)
+        # x.size() = (N*M, 1, max_seq, fe)
         # CNN
         out = self.layer1(x)
         out = self.layer2(out)
@@ -75,7 +67,6 @@ class CNN3(nn.Module):
         # DNN -- pass through linear layers
         out = self.linear_layer1(out)
         out = self.linear_layer2(out)
-        out = self.linear_layer3(out)
 
         return out
 
@@ -86,6 +77,5 @@ class CNN3(nn.Module):
             (self.num_cnn_layers - 1) * self.first_channels
         return kernels * height * width
 
-    @ staticmethod
-    def count_parameters(model):
-        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    def count_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
