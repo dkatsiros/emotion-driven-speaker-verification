@@ -140,15 +140,15 @@ valid_freq = 5
 #                                       epochs=EPOCHS,
 #                                       cnn=CNN_BOOLEAN)
 # exit()
-best_model, train_losses, valid_losses, train_accuracy, valid_accuracy, _epochs = train_and_validate(model=model,
-                                                                                                     train_loader=train_loader,
-                                                                                                     valid_loader=valid_loader,
-                                                                                                     loss_function=loss_function,
-                                                                                                     optimizer=optimizer,
-                                                                                                     epochs=EPOCHS,
-                                                                                                     cnn=CNN_BOOLEAN,
-                                                                                                     valid_freq=5,
-                                                                                                     early_stopping=True)
+best_model, _epochs = train_and_validate(model=model,
+                                         train_loader=train_loader,
+                                         valid_loader=valid_loader,
+                                         loss_function=loss_function,
+                                         optimizer=optimizer,
+                                         epochs=EPOCHS,
+                                         cnn=CNN_BOOLEAN,
+                                         valid_freq=5,
+                                         early_stopping=True)
 
 timestamp = time.ctime()
 
@@ -161,7 +161,5 @@ torch.save(best_model.state_dict(), modelname)
 y_pred, y_true = test(best_model, test_loader, cnn=CNN_BOOLEAN)
 # ===== RESULTS =====
 results(model=best_model, optimizer=optimizer, loss_function=loss_function,
-        train_loss=train_losses, valid_loss=valid_losses,
-        train_accuracy=train_accuracy, valid_accuracy=valid_accuracy,
         y_pred=y_pred, y_true=y_true, epochs=_epochs,
-        cv=valid_freq, timestamp=timestamp, dataset=DATASET)
+        timestamp=timestamp, dataset=DATASET)

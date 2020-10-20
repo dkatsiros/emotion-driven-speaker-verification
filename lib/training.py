@@ -7,6 +7,7 @@ import logging
 
 import numpy as np
 import torch
+from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import f1_score, accuracy_score
 import matplotlib.pyplot as plt
 # Report metrics
@@ -23,7 +24,7 @@ from core.config import PLOTS_FOLDER, REPORTS_FOLDER
 from core import config
 
 
-def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
+def train(_epoch, dataloader, model, loss_function, optimizer, writer, cnn=False, *args, **kwargs):
     # Set model to train mode
     model.train()
     training_loss = 0.0
@@ -78,14 +79,11 @@ def train(_epoch, dataloader, model, loss_function, optimizer, cnn=False):
                  dataset_size=len(dataloader.dataset))
 
     accuracy = correct/len(dataloader.dataset) * 100
-    # Print some stats
-    # print(
-    #     f'\nTrain loss at epoch {_epoch} : {round(training_loss/len(dataloader), 4)}')
-    # Return loss, accuracy
-    return training_loss / len(dataloader.dataset), accuracy
+    writer.add_scalar("Accuracy/train", accuracy, _epoch)
+    return training_loss / len(dataloader.dataset)
 
 
-def validate(_epoch, dataloader, model, loss_function, cnn=False):
+def validate(_epoch, dataloader, model, loss_function, writer, cnn=False, *args, **kwargs):
     """Validate the model."""
 
     # Put model to evalutation mode
@@ -134,8 +132,9 @@ def validate(_epoch, dataloader, model, loss_function, cnn=False):
             f'\nValidation loss at epoch {_epoch} : {round(valid_loss/len(dataloader.dataset), 4)}')
 
         accuracy = correct / len(dataloader.dataset) * 100
+        writer.add_scalar("Accuracy/validation", accuracy, _epoch)
 
-    return valid_loss / len(dataloader.dataset), accuracy
+    return valid_loss / len(dataloader.dataset)
 
 
 def train_and_validate(model,
@@ -149,7 +148,8 @@ def train_and_validate(model,
                        valid_freq=5,
                        checkpoint_freq=config.CHECKPOINT_FREQ,
                        train_func=train,
-                       validate_func=validate):
+                       validate_func=validate,
+                       writer=SummaryWriter()):
     """
     Trains the given `model`.
     Then validates every `valid_freq`.
@@ -159,13 +159,7 @@ def train_and_validate(model,
     # obtain the model's device ID
     device = next(model.parameters()).device
 
-    # print(next(iter(train_loader)))
-
-    # Store losses, models
-    all_accuracy_training = []
-    all_accuracy_validation = []
-    all_train_loss = []
-    all_valid_loss = []
+    # Store models
     best_model = None
 
     # Early stopping
@@ -186,25 +180,21 @@ def train_and_validate(model,
             model.to(device)
 
         # ===== Training HERE =====
-        train_loss, train_acc = train_func(epoch, train_loader, model,
-                                           loss_function, optimizer, cnn=cnn)
-
+        train_loss = train_func(epoch, train_loader, model,
+                                loss_function, optimizer, cnn=cnn, writer=writer)
         # log training results
+        writer.add_scalar("Loss/train", train_loss, epoch)
         mesg = f"{time.ctime()}\tEpoch:{epoch}\tTraining Loss:{train_loss}\n"
         logging.info(mesg)
 
-        # Store statistics for later usage
-        all_train_loss.append(train_loss)
-        all_accuracy_training.append(train_acc)
-
         # ====== VALIDATION HERE ======
         if epoch % valid_freq == 0:
-            valid_loss, valid_acc = validate_func(epoch, valid_loader,
-                                                  model, loss_function, cnn=cnn)
+            valid_loss = validate_func(epoch, valid_loader,
+                                       model, loss_function,
+                                       cnn=cnn, writer=writer)
 
             # Store statistics for later usage
-            all_valid_loss.append(valid_loss)
-            all_accuracy_validation.append(valid_acc)
+            writer.add_scalar("Loss/validation", valid_loss, epoch)
 
             # logging on file
             if config.LOGGING is True:
@@ -225,16 +215,15 @@ def train_and_validate(model,
                     # Load best stored model, so far
                     best_model = early_stopping.restore_best_model().to(device)
                     print(f"Restored best model from {early_stopping.path}")
-                    return [best_model,
-                            all_train_loss, all_valid_loss,
-                            all_accuracy_training, all_accuracy_validation,
-                            epoch]
+                    writer.flush()
+                    return best_model, epoch
 
     print(f'\nTraining exited normally at epoch {epoch}.')
     # Remove unnessesary model
-    del model
     best_model = model.to(device)
-    return best_model, all_train_loss, all_valid_loss, all_accuracy_training, all_accuracy_validation, epoch
+    del model
+    writer.flush()
+    return best_model, epoch
 
 
 def test(model, dataloader, cnn=False):
@@ -281,61 +270,10 @@ def test(model, dataloader, cnn=False):
 
 
 def results(model, optimizer, loss_function,
-            train_loss, valid_loss,
-            train_accuracy, valid_accuracy,
             y_pred, y_true,
             epochs, timestamp,
-            dataset, cv=5):
-    """Prints the results of training. Also saves some plots."""
-    # Plots
-
-    # Train validation plot
-    try:
-        fig = plt.figure(figsize=(10, 10))
-        plt.ylabel('Train - Validation Loss')
-        plt.xlabel('Epoch')
-        plt.plot(list(range(1, epochs + 1)), train_loss,
-                 color='r', label='Training')
-        vld_values = np.array([[l]*cv for l in valid_loss]).flatten()
-        # Add some missing values below
-        vld_values = np.concatenate(
-            (vld_values, np.array([valid_loss[-1]]*(epochs % cv))))
-
-        plt.plot(list(range(1, epochs + 1)), vld_values,
-                 color='b', label='Validation')
-        plt.legend()
-        plot_filename = f'train_valid_loss_{model.__class__.__name__}_{epochs}_{timestamp}.png'
-        plt.savefig(os.path.join(PLOTS_FOLDER, plot_filename))
-    except Exception as e:
-        print(f'Exception raised while creating plot: {e}')
-    finally:
-        # Just in case plotting fails. We need the name below
-        plot_filename = f'train_valid_loss_{model.__class__.__name__}_{epochs}_{timestamp}.png'
-
-    #  Accuracy plot
-    try:
-        plt.figure(figsize=(10, 10))
-        plt.plot(list(range(1, epochs + 1)), train_accuracy,
-                 color='r', label='Training')
-        vld_acc_values = np.array([[l]*cv for l in valid_accuracy]).flatten()
-        # Add some missing values below
-        vld_acc_values = np.concatenate(
-            (vld_acc_values, np.array([valid_accuracy[-1]]*(epochs % cv))))
-
-        plt.plot(list(range(1, epochs + 1)), vld_acc_values,
-                 color='b', label='Validation')
-        plt.xlabel('Epochs')
-        plt.ylabel('Accuracy')
-        plt.title('Training Validation Accuracy')
-        plt.legend()
-        accuracy_filename = f'accuracy_{model.__class__.__name__}_{epochs}_{timestamp}.png'
-        plt.savefig(os.path.join(PLOTS_FOLDER, accuracy_filename))
-
-    except Exception as e:
-        print(f'Exception raised while creating plot: {e}')
-    finally:
-        # Just in case plotting fails. We need the name below
-        accuracy_filename = f'accuracy_{model.__class__.__name__}_{epochs}_{timestamp}.png'
+            dataset):
+    """Prints model details"""
 
     # Print metrics
     f1_metric = f1_score(y_true, y_pred, average='macro')
@@ -349,8 +287,6 @@ def results(model, optimizer, loss_function,
         classes = iemocap.get_classes(n_classes=4)
     elif dataset == "EMODB":
         classes = emodb.get_classes()
-    elif dataset == "VOXCELEB":
-        classes = voxceleb.get_classes()
     else:
         classes = iemocap.get_classes(n_classes=4)
     cnf_mtrx_filename = f'{model.__class__.__name__}_{epochs}_{timestamp}_confusion_matrix.png'
@@ -388,10 +324,6 @@ acc = {round(acc,4)}
 ```python
 {model_classification_report}
 ```
-## Training / Validation Loss
-<img src='../plots/{plot_filename}'>
-## Training Accuracy
-<img src='../plots/{accuracy_filename}'>
 ## Confusion matrix
 <img src='../plots/{cnf_mtrx_filename}'>
 ## Forward

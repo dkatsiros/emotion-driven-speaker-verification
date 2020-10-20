@@ -35,14 +35,14 @@ REPORTS_FOLDER = 'plotting/reports/'
 ####################################################
 # Core
 ######
-TRAINING = False
-RESTORE_FROM_PREVIOUS_MODEL = True
+TRAINING = True
+RESTORE_FROM_PREVIOUS_MODEL = False
 MODEL_TO_RESTORE = "/home/dimitris/Downloads/early_stopping2.pt"
 # Learning
-EPOCHS = 900
+EPOCHS = 9
+VALID_FREQ = 3
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-5
-VALID_FREQ = 5
 # Model
 #######
 PROJ = 256
