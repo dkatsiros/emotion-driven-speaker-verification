@@ -28,21 +28,18 @@ class Voxceleb1(Dataset):
         self.fixed_length = fixed_length
 
         if training is True:
-            self.path = 'datasets/voxceleb1/train/wav'
             self.speakers = X
             self.utterance_number = config.SPEAKER_M
             shuffle(self.speakers)
             return
 
         if validation is True:
-            self.path = 'datasets/voxceleb1/validation/wav'
             self.speakers = X
             self.utterance_number = config.SPEAKER_M
             shuffle(self.speakers)
             return
 
         if test is True:
-            self.path = 'datasets/voxceleb1/test/wav'
             self.speakers = X
             self.utterance_number = config.SPEAKER_M  # Test
             shuffle(self.speakers)
@@ -121,21 +118,18 @@ class Voxceleb1PreComputedMelSpectr(Dataset):
         self.fixed_length = fixed_length
 
         if training is True:
-            self.path = 'datasets/voxceleb1/train/wav'
             self.speakers = X
             self.utterance_number = config.SPEAKER_M
             shuffle(self.speakers)
             return
 
         if validation is True:
-            self.path = 'datasets/voxceleb1/validation/wav'
             self.speakers = X
             self.utterance_number = config.SPEAKER_M
             shuffle(self.speakers)
             return
 
         if test is True:
-            self.path = 'datasets/voxceleb1/test/wav'
             self.speakers = X
             self.utterance_number = config.SPEAKER_M  # Test
             shuffle(self.speakers)
