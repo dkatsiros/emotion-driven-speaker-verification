@@ -206,8 +206,7 @@ def train_voxceleb():
     max_seq_len = 245
 
     # PyTorch Settings
-    BATCH_SIZE = 16  # len(X_train) // 20
-    print(f'Selected Batch Size: {BATCH_SIZE}')
+    print(f'Selected Batch Size(#speakers per batch): {config.SPEAKER_N}')
     fe_method = "MEL_SPECTROGRAM" if config.CNN_BOOLEAN is True else "MFCC"
 
     # Training dataloader
