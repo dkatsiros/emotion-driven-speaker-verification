@@ -19,7 +19,7 @@ from lib.sound_processing import compute_max_sequence_length, compute_sequence_l
 from lib.training import train_and_validate, test, results, overfit
 from lib.training import deterministic_model
 from models.SpeechEmbedder import CNNSpeechEmbedder
-from dataloading.voxceleb import Voxceleb1
+from dataloading.voxceleb import Voxceleb1, Voxceleb1PreComputedMelSpectr
 from utils.load_dataset import load_VoxCeleb
 
 
@@ -209,20 +209,22 @@ def train_voxceleb():
     print(f'Selected Batch Size(#speakers per batch): {config.SPEAKER_N}')
     fe_method = "MEL_SPECTROGRAM" if config.CNN_BOOLEAN is True else "MFCC"
 
+    dataloader_func = Voxceleb1PreComputedMelSpectr if config.PRECOMPUTED_MELS is True else Voxceleb1
     # Training dataloader
-    train_dataset = Voxceleb1(X=train_speakers,
-                              training=True,
-                              fe_method=fe_method,
-                              max_seq_len=max_seq_len)
-    train_loader = DataLoader(train_dataset, batch_size=config.SPEAKER_N,
-                              shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
-    # Validation dataloader
-    validation_dataset = Voxceleb1(X=validation_speakers,
-                                   validation=True,
-                                   fe_method=fe_method,
-                                   max_seq_len=max_seq_len)
-    validation_loader = DataLoader(validation_dataset, batch_size=config.SPEAKER_N,
+    train_dataset = dataloader_func(X=train_speakers,
+                                    training=True,
+                                    fe_method=fe_method,
+                                    max_seq_len=max_seq_len)
+
+    train_loader = dataloader_func(train_dataset, batch_size=config.SPEAKER_N,
                                    shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
+    # Validation dataloader
+    validation_dataset = dataloader_func(X=validation_speakers,
+                                         validation=True,
+                                         fe_method=fe_method,
+                                         max_seq_len=max_seq_len)
+    validation_loader = dataloader_func(validation_dataset, batch_size=config.SPEAKER_N,
+                                        shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
 
     # #speakers # utterances, maxseqlen, melspectr_dim
     N, M, width, height = next(iter(train_loader)).size()

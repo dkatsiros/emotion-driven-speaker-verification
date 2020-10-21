@@ -110,15 +110,13 @@ class Voxceleb1(Dataset):
             "Zero padding works only with mel spectrogram for now")
 
 
-class Voxceleb1PreComputed(Dataset):
+class Voxceleb1PreComputedMelSpectr(Dataset):
     """Fast implementation of PyTorch's abstruct dataset for Voxceleb"""
 
-    def __init__(self, X, training=False, validation=False, test=False,
-                 fe_method=None, max_seq_len=None, fixed_length=True,
+    def __init__(self, X, training=False, validation=False, test=False, max_seq_len=None, fixed_length=True,
                  * args, **kwargs):
         # Only one can be True
         assert (training + validation + test) == 1
-        self.fe_method = fe_method
         self.max_seq_len = max_seq_len
         self.fixed_length = fixed_length
 
@@ -158,16 +156,10 @@ class Voxceleb1PreComputed(Dataset):
         shuffle(wav_files)
         wav_files = wav_files[0:self.utterance_number]
 
-        if self.fe_method is None:
-            raise NotImplementedError("fe_method is missing!")
-        # feature extraction method
-        if self.fe_method == "MFCC":
-            raise NotImplementedError
-        if self.fe_method == "MEL_SPECTROGRAM":
-            # Just read the input np arrays. 0.036sec to 0.0093 per wav faster
-            # ~75% relative increase in bottleneck
-            features = [np.load(wav) for wav in wav_files]
-            features = self.zero_pad_and_stack(features)
+        # Just read the input np arrays. 0.036sec to 0.0093 per wav faster
+        # ~75% relative increase in bottleneck
+        features = [np.load(wav) for wav in wav_files]
+        features = self.zero_pad_and_stack(features)
         return torch.Tensor(features)
 
     def zero_pad_and_stack(self, X):
