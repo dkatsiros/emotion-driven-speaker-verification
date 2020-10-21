@@ -110,12 +110,14 @@ class Voxceleb1(Dataset):
 class Voxceleb1PreComputedMelSpectr(Dataset):
     """Fast implementation of PyTorch's abstruct dataset for Voxceleb"""
 
-    def __init__(self, X, training=False, validation=False, test=False, max_seq_len=None, fixed_length=True,
-                 * args, **kwargs):
+    def __init__(self, X, training=False, validation=False, test=False,
+                 max_seq_len=None, fixed_length=True, fe_method="MEL_SPECTROGRAM",
+                 *args, **kwargs):
         # Only one can be True
         assert (training + validation + test) == 1
         self.max_seq_len = max_seq_len
         self.fixed_length = fixed_length
+        self.fe_method = fe_method
 
         if training is True:
             self.speakers = X
