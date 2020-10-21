@@ -209,22 +209,22 @@ def train_voxceleb():
     print(f'Selected Batch Size(#speakers per batch): {config.SPEAKER_N}')
     fe_method = "MEL_SPECTROGRAM" if config.CNN_BOOLEAN is True else "MFCC"
 
-    dataloader_func = Voxceleb1PreComputedMelSpectr if config.PRECOMPUTED_MELS is True else Voxceleb1
+    dataset_func = Voxceleb1PreComputedMelSpectr if config.PRECOMPUTED_MELS is True else Voxceleb1
     # Training dataloader
-    train_dataset = dataloader_func(X=train_speakers,
-                                    training=True,
-                                    fe_method=fe_method,
-                                    max_seq_len=max_seq_len)
+    train_dataset = dataset_func(X=train_speakers,
+                                 training=True,
+                                 fe_method=fe_method,
+                                 max_seq_len=max_seq_len)
 
-    train_loader = dataloader_func(train_dataset, batch_size=config.SPEAKER_N,
-                                   shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=config.SPEAKER_N,
+                              shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
     # Validation dataloader
-    validation_dataset = dataloader_func(X=validation_speakers,
-                                         validation=True,
-                                         fe_method=fe_method,
-                                         max_seq_len=max_seq_len)
-    validation_loader = dataloader_func(validation_dataset, batch_size=config.SPEAKER_N,
-                                        shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
+    validation_dataset = dataset_func(X=validation_speakers,
+                                      validation=True,
+                                      fe_method=fe_method,
+                                      max_seq_len=max_seq_len)
+    validation_loader = DataLoader(validation_dataset, batch_size=config.SPEAKER_N,
+                                   shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
 
     # #speakers # utterances, maxseqlen, melspectr_dim
     N, M, width, height = next(iter(train_loader)).size()
