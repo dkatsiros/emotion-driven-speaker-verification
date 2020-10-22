@@ -259,19 +259,17 @@ def train_voxceleb():
     # Training Pipeline
     #############################################################################
 
-    [best_model, train_losses,
-     valid_losses, train_accuracy,
-     valid_accuracy, _epochs] = train_and_validate(model=model,
-                                                   train_loader=train_loader,
-                                                   valid_loader=validation_loader,
-                                                   loss_function=loss_function,
-                                                   optimizer=optimizer,
-                                                   epochs=config.EPOCHS,
-                                                   cnn=config.CNN_BOOLEAN,
-                                                   valid_freq=config.VALID_FREQ,
-                                                   early_stopping=True,
-                                                   train_func=train_se,
-                                                   validate_func=validate_se)
+    [best_model,  _epochs] = train_and_validate(model=model,
+                                                train_loader=train_loader,
+                                                valid_loader=validation_loader,
+                                                loss_function=loss_function,
+                                                optimizer=optimizer,
+                                                epochs=config.EPOCHS,
+                                                cnn=config.CNN_BOOLEAN,
+                                                valid_freq=config.VALID_FREQ,
+                                                early_stopping=True,
+                                                train_func=train_se,
+                                                validate_func=validate_se)
 
 
 def test_voxceleb(max_seq_len=245):
