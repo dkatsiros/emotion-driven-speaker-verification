@@ -12,8 +12,7 @@ from models.lstm import LSTM
 from models.cnn import CNN
 from models.cnn2 import CNN2
 from models.cnn3 import CNN3
-from lib.training import train_and_validate, test, results, overfit
-# progress, fit, print_results
+from lib.training import train_and_validate, test, results
 from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
 import os
 import random

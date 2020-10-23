@@ -42,8 +42,8 @@ TRAINING = True
 RESTORE_FROM_PREVIOUS_MODEL = False
 MODEL_TO_RESTORE = "/home/dimitris/Downloads/early_stopping2.pt"
 # Learning
-EPOCHS = 9
-VALID_FREQ = 3
+EPOCHS = 10
+VALID_FREQ = 5
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-5
 # Model
@@ -61,7 +61,7 @@ CHECKPOINT_FREQ = 100
 CHECKPOINT_FOLDER = "checkpoints/"
 CHECKPOINT_MODELNAME = "speaker_verifier"
 LOGGING = True
-LOG_FILE = 'checkpoints/log.txt'
+LOG_FILE = f'checkpoints/log_{MODELNAME[:-3]}.txt'
 LOG_FILE_TEST = 'checkpoints/log_test.txt'
 
 ####################################################

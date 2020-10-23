@@ -303,30 +303,30 @@ def results(model, optimizer, loss_function,
         data = f"""
 # REPORT:
 # {filename}
-## Dataset 
-### {dataset}
-## Model details:
+# Dataset
+# {dataset}
+# Model details:
 ```python
 {model}
 ```
-## Optimizer
+# Optimizer
 ```python
 {optimizer}
 ```
-## Loss function
+# Loss function
 ```python
 {loss_function}
 ```
-## Metrics:
+# Metrics:
 f1-macro-score = {round(f1_metric,4)}
 acc = {round(acc,4)}
-## Classification Report:
+# Classification Report:
 ```python
 {model_classification_report}
 ```
-## Confusion matrix
+# Confusion matrix
 <img src='../plots/{cnf_mtrx_filename}'>
-## Forward
+# Forward
 ```python
 {forward_raw}
 ```
@@ -354,37 +354,39 @@ def progress(loss, epoch, batch, batch_size, dataset_size):
         print()
 
 
-def overfit(model,
-            train_loader,
-            loss_function,
-            optimizer,
-            epochs,
-            cnn=False):
+def overfit_batch(model,
+                  train_loader,
+                  loss_function,
+                  optimizer,
+                  epochs,
+                  train_func=train,
+                  cnn=False):
     """
-    Trains the given <model>.
-    Then validates every <valid_freq>.
-    Returns: <best_model> containing the model with best parameters.
+    Trains a <model> with a given batch
     """
-
+    import torch
     # obtain the model's device ID
     device = next(model.parameters()).device
 
-    print(next(iter(train_loader)))
-
     # Store losses, models
     all_train_loss = []
-    models = []
 
+    # Get first batch
+    first_batch = next(iter(train_loader))
+    batch_dims = len(first_batch.size())
+    # Create new train loader with using len(dataloader)*first batch
+    train_loader = first_batch.repeat(
+        (len(train_loader), *[1]*batch_dims))
     # Iterate for epochs
     for epoch in range(1, epochs + 1):
 
         # ===== Training HERE =====
-        train_loss = train(epoch, train_loader, model,
-                           loss_function, optimizer, cnn=cnn)
+        train_loss = train_func(epoch, train_loader, model,
+                                loss_function, optimizer, cnn=cnn)
         # Store statistics for later usage
         all_train_loss.append(train_loss)
-        if epoch % 5 == 0:
-            print(f'\nEpoch {epoch} loss: {train_loss}')
+        print(f'\nEpoch {epoch} loss: {train_loss}')
+        logging.info(f'\nEpoch {epoch} loss: {train_loss}')
 
     return model, all_train_loss, epoch
 
