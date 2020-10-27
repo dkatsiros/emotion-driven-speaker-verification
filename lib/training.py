@@ -5,8 +5,9 @@ import math
 from inspect import getsource
 import logging
 
-import numpy as np
 import torch
+from tqdm import tqdm
+import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.metrics import f1_score, accuracy_score
 import matplotlib.pyplot as plt
