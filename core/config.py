@@ -39,10 +39,10 @@ REPORTS_FOLDER = 'plotting/reports/'
 # Core
 ######
 TRAINING = True
-RESTORE_FROM_PREVIOUS_MODEL = False
-MODEL_TO_RESTORE = "/home/dimitris/Downloads/early_stopping2.pt"
+RESTORE_FROM_PREVIOUS_MODEL = True
+MODEL_TO_RESTORE = "checkpoints/emotional_iemocap.pt"
 # Learning
-EPOCHS = 10
+EPOCHS = 900
 VALID_FREQ = 5
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-5
@@ -52,17 +52,18 @@ PROJ = 256
 CNN_BOOLEAN = True
 # Early Stopping
 ################
-PATIENCE = 7
+PATIENCE = 10
 DELTA = 1e-3
-MODELNAME = "early_stopping.pt"
+MODEL = "emotional_iemocap"
+MODELNAME = f"{MODEL}.pt"
 # Checkpoints & logging
 #######################
 CHECKPOINT_FREQ = 100
 CHECKPOINT_FOLDER = "checkpoints/"
-CHECKPOINT_MODELNAME = "speaker_verifier"
+CHECKPOINT_MODELNAME = f"{MODEL}"
 LOGGING = True
-LOG_FILE = f'checkpoints/log_{MODELNAME[:-3]}.txt'
-LOG_FILE_TEST = 'checkpoints/log_test.txt'
+LOG_FILE = f'checkpoints/log_{MODEL}.txt'
+LOG_FILE_TEST = f'checkpoints/log_{MODEL}test.txt'
 
 ####################################################
 # PyTorch

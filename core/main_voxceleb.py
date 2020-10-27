@@ -15,6 +15,7 @@ from tqdm import tqdm
 import config
 from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
 from lib.loss import GE2ELoss
+from lib.model_editing import drop_layers, print_require_grad_parameter
 from lib.sound_processing import compute_max_sequence_length, compute_sequence_length_distribution
 from lib.training import train_and_validate, test, results, overfit_batch
 from lib.training import deterministic_model
@@ -241,6 +242,11 @@ def train_voxceleb():
     else:
         model = CNNSpeechEmbedder(height=height,
                                   width=width).to(device)
+
+    # Remove final linear layer
+    # making output 256 dimension
+    model = drop_layers(model, 1)
+    print_require_grad_parameter(model)
 
     print(f'Running on: {device}.\n')
     # logging & parameters
