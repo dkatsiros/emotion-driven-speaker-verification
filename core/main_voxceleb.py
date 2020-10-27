@@ -251,7 +251,7 @@ def train_voxceleb():
     print(f'Running on: {device}.\n')
     # logging & parameters
     logging.basicConfig(filename=config.LOG_FILE, level=logging.INFO)
-    print(f'Model Parameters: {model.count_parameters()}')
+    # print(f'Model Parameters: {model.count_parameters()}')
     print(model)
 
     # Loss and optimizer
@@ -309,7 +309,7 @@ def test_voxceleb(max_seq_len=245):
     # logging & parameters
     logging.basicConfig(filename=config.LOG_FILE_TEST, level=logging.INFO)
     print(f'Running on: {device}.\n')
-    print(f'Model Parameters: {model.count_parameters()}')
+    # print(f'Model Parameters: {model.count_parameters()}')
     print(model)
     # Loss and optimizer
     loss_function = GE2ELoss(device=device)
