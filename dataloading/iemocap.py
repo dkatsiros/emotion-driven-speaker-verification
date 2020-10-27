@@ -10,7 +10,9 @@ import numpy as np
 class IemocapDataset(Dataset):
     """Custom PyTorch Dataset for preparing features from wav inputs."""
 
-    def __init__(self, X, y, feature_extraction_method="MFCC", oversampling=False):
+    def __init__(self, X, y, feature_extraction_method="MFCC",
+                 oversampling=False, fixed_length=False,
+                 max_seq_len=None):
         """Create all important variables for dataset tokenization
 
         Arguments:
@@ -20,6 +22,8 @@ class IemocapDataset(Dataset):
             oversampling {bool} -- [Resampling technique to be applied]
         """
         self.feature_extraction_method = feature_extraction_method
+        self.fixed_length = fixed_length
+        self.max_seq_len = max_seq_len
 
         if oversampling is True:
             ros = RandomOverSampler()
@@ -106,7 +110,10 @@ class IemocapDataset(Dataset):
             return padded
 
         elif self.feature_extraction_method == "MEL_SPECTROGRAM":
-            max_length = 342  # 320  # 998  # self.lengths.max()
+            if self.max_seq_len is None:
+                max_length = 342  # 320  # 998  # self.lengths.max()
+            else:
+                max_length = self.max_seq_len
 
             feature_dim = X[0].shape[-1]
             padded = np.zeros((len(X), max_length, feature_dim))
@@ -118,8 +125,13 @@ class IemocapDataset(Dataset):
                     diff = max_length - X[i].shape[0]
                     # pad
                     X[i] = np.vstack((X[i], np.zeros((diff, feature_dim))))
+                else:
+                    if self.fixed_length is True:
+                        # Set a fixed length => information loss
+                        X[i] = np.take(X[i], list(
+                            range(0, max_length)), axis=0)
+                # Add to padded
                 padded[i, :, :] = X[i]
             return padded
-
-        else:
-            raise AssertionError()
+        raise NotImplementedError(
+            "Zero padding works only with mel spectrogram for now")
