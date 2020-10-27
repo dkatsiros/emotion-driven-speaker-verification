@@ -18,7 +18,7 @@ DATASET_FOLDER = "emodb/wav/"
 
 # Stored variables
 VARIABLES_FOLDER = "variables/"
-DETERMINISTIC = False
+DETERMINISTIC = True
 RECOMPUTE = True
 
 # Sampling process
@@ -45,7 +45,7 @@ MODEL_TO_RESTORE = "checkpoints/emotional_iemocap.pt"
 EPOCHS = 900
 VALID_FREQ = 5
 BATCH_SIZE = 16
-LEARNING_RATE = 1e-5
+LEARNING_RATE = 1e-3
 # Model
 #######
 PROJ = 256

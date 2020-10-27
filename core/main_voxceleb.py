@@ -259,7 +259,7 @@ def train_voxceleb():
     optimizer = torch.optim.AdamW([
         {'params': model.parameters()},
         {'params': loss_function.parameters()}
-    ], weight_decay=0.02)
+    ], weight_decay=0.02, lr=(config.LEARNING_RATE if config.LEARNING_RATE is not None else 1e-3))
 
     #############################################################################
     # Training Pipeline
