@@ -115,42 +115,73 @@ class Voxceleb1PreComputedMelSpectr(Dataset):
                  *args, **kwargs):
         # Only one can be True
         assert (training + validation + test) == 1
+        # Number of speakers per batch
+        self.N = config.SPEAKER_N
+        # Number of utterances per speaker per batch
+        self.M = config.SPEAKER_M
+        # Number of utterances per speaker in all batches
+        self.U = config.SPEAKER_U
+        self.utterance_indexes = list(range(self.U))
+
         self.max_seq_len = max_seq_len
         self.fixed_length = fixed_length
         self.fe_method = fe_method
 
         if training is True:
             self.speakers = X
-            self.utterance_number = config.SPEAKER_M
+            self.S = len(self.speakers)
             shuffle(self.speakers)
+            shuffle(self.utterance_indexes)
             return
 
         if validation is True:
             self.speakers = X
-            self.utterance_number = config.SPEAKER_M
+            self.S = len(self.speakers)
             shuffle(self.speakers)
+            shuffle(self.utterance_indexes)
             return
 
         if test is True:
-            self.speakers = X
-            self.utterance_number = config.SPEAKER_M  # Test
+            self.speakers = X  # Test
+            self.S = len(self.speakers)
             shuffle(self.speakers)
+            shuffle(self.utterance_indexes)
             return
 
     def __len__(self):
-        return len(self.speakers)
+        # Custom length = total_#speakers * (U/M)
+        # total number of speakers != N
+        return len(self.speakers) * (self.U // self.M)
 
     def __getitem__(self, idx):
+        # # Shuffling at the beggining of each epoch
+        if idx == 0:
+            shuffle(self.speakers)
+            shuffle(self.utterance_indexes)
+
+        # Do not shuffle in Dataloader.
+        # Shuffling is implemented in Dataset (__init__)
+
+        # So, in each epoch spk_i is accessed U/M times
+        # ensuring that all U samples of i'th speaker are used
+        curr_speaker_idx = idx % self.S
+        # k represents the round or (U)div(S)
+        # where S in the total number of speakers
+        k = idx // self.S
 
         # Get the speaker and all his wav's
-        speaker = self.speakers[idx]
-        wav_files = glob.glob(speaker+'/*/*.npy')
+        speaker = self.speakers[curr_speaker_idx]
 
-        # At each call, different samples of the same speaker
-        # are given to the dataloader. Every epoch the model
-        # pottentially learns different samples for the same speaker.
-        shuffle(wav_files)
-        wav_files = wav_files[0:self.utterance_number]
+        # assert that glob.glob() reads each time the files
+        # in the same order. that ensures that each file is being
+        # read only once in each epoch
+        wav_files = glob.glob(speaker+'/*/*.npy')
+        # shuffle wav files
+        wav_files = [wav_files[i] for i in self.utterance_indexes]
+
+        # We want to get only a specific subset of
+        # the wav_files. This round `k` get [k*M:(k+1)*M]
+        wav_files = wav_files[k * self.M:(k+1) * self.M]
 
         # Just read the input np arrays. 0.036sec to 0.0093 per wav faster
         # ~75% relative increase in bottleneck
