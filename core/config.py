@@ -10,7 +10,7 @@ DATASET = "EMODB"
 FEATURE_EXTRACTOR = "MFCC"
 
 # VOXCELEB OPTIONs
-PRECOMPUTED_MELS = False
+PRECOMPUTED_MELS = True
 
 # Files
 DATASET_PATH = "datasets"
@@ -18,7 +18,10 @@ DATASET_FOLDER = "emodb/wav/"
 
 # Stored variables
 VARIABLES_FOLDER = "variables/"
+<< << << < HEAD
 DETERMINISTIC = True
+== == == =
+>>>>>> > Add all different wavs per speaker in one epoch
 RECOMPUTE = True
 
 # Sampling process
@@ -58,17 +61,18 @@ MODEL = "emotional_iemocap"
 MODELNAME = f"{MODEL}.pt"
 # Checkpoints & logging
 #######################
-CHECKPOINT_FREQ = 100
+CHECKPOINT_FREQ = 300
 CHECKPOINT_FOLDER = "checkpoints/"
 CHECKPOINT_MODELNAME = f"{MODEL}"
 LOGGING = True
 LOG_FILE = f'checkpoints/log_{MODEL}.txt'
-LOG_FILE_TEST = f'checkpoints/log_{MODEL}test.txt'
+LOG_FILE_TEST = f'checkpoints/log_{MODEL}_test.txt'
 
 ####################################################
 # PyTorch
 ####################################################
 # Dataloading / Speakers
 NUM_WORKERS = 8
-SPEAKER_N = 5
-SPEAKER_M = 4
+SPEAKER_N = 8
+SPEAKER_M = 8
+SPEAKER_U = 45
