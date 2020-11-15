@@ -217,14 +217,14 @@ def train_voxceleb():
                                  max_seq_len=max_seq_len)
 
     train_loader = DataLoader(train_dataset, batch_size=config.SPEAKER_N,
-                              shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
+                              shuffle=False, num_workers=config.NUM_WORKERS, drop_last=True)
     # Validation dataloader
     validation_dataset = dataset_func(X=validation_speakers,
                                       validation=True,
                                       fe_method=fe_method,
                                       max_seq_len=max_seq_len)
     validation_loader = DataLoader(validation_dataset, batch_size=config.SPEAKER_N,
-                                   shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
+                                   shuffle=False, num_workers=config.NUM_WORKERS, drop_last=True)
 
     # #speakers # utterances, maxseqlen, melspectr_dim
     N, M, width, height = next(iter(train_loader)).size()
@@ -279,14 +279,14 @@ def test_voxceleb(max_seq_len=245):
     _, test_speakers, _ = load_VoxCeleb(validation=False)
 
     fe_method = "MEL_SPECTROGRAM" if config.CNN_BOOLEAN is True else "MFCC"
-
+    dataset_func = Voxceleb1PreComputedMelSpectr if config.PRECOMPUTED_MELS is True else Voxceleb1
     # Test dataloader
-    test_dataset = Voxceleb1(X=test_speakers,
-                             test=True,
-                             fe_method=fe_method,
-                             max_seq_len=max_seq_len)
+    test_dataset = dataset_func(X=test_speakers,
+                                test=True,
+                                fe_method=fe_method,
+                                max_seq_len=max_seq_len)
     test_loader = DataLoader(test_dataset, batch_size=config.SPEAKER_N,
-                             shuffle=True, num_workers=config.NUM_WORKERS, drop_last=True)
+                             shuffle=False, num_workers=config.NUM_WORKERS, drop_last=True)
 
     N, M, width, height = next(iter(test_loader)).size()
 

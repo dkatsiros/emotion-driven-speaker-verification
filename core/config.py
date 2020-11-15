@@ -10,7 +10,7 @@ DATASET = "EMODB"
 FEATURE_EXTRACTOR = "MFCC"
 
 # VOXCELEB OPTIONs
-PRECOMPUTED_MELS = False
+PRECOMPUTED_MELS = True
 
 # Files
 DATASET_PATH = "datasets"
@@ -18,7 +18,6 @@ DATASET_FOLDER = "emodb/wav/"
 
 # Stored variables
 VARIABLES_FOLDER = "variables/"
-DETERMINISTIC = False
 RECOMPUTE = True
 
 # Sampling process
@@ -40,34 +39,37 @@ REPORTS_FOLDER = 'plotting/reports/'
 ######
 TRAINING = True
 RESTORE_FROM_PREVIOUS_MODEL = False
-MODEL_TO_RESTORE = "/home/dimitris/Downloads/early_stopping2.pt"
+MODEL_TO_RESTORE = "checkpoints/voxceleb_deterministic.pt"
 # Learning
-EPOCHS = 10
+DETERMINISTIC = False
+EPOCHS = 900
 VALID_FREQ = 5
 BATCH_SIZE = 16
-LEARNING_RATE = 1e-5
+LEARNING_RATE = None
 # Model
 #######
 PROJ = 256
 CNN_BOOLEAN = True
 # Early Stopping
 ################
-PATIENCE = 7
+PATIENCE = 10
 DELTA = 1e-3
-MODELNAME = "early_stopping.pt"
+MODEL = "voxceleb_nondeterministic_1"
+MODELNAME = f"{MODEL}.pt"
 # Checkpoints & logging
 #######################
-CHECKPOINT_FREQ = 100
+CHECKPOINT_FREQ = 300
 CHECKPOINT_FOLDER = "checkpoints/"
-CHECKPOINT_MODELNAME = "speaker_verifier"
+CHECKPOINT_MODELNAME = f"{MODEL}"
 LOGGING = True
-LOG_FILE = f'checkpoints/log_{MODELNAME[:-3]}.txt'
-LOG_FILE_TEST = 'checkpoints/log_test.txt'
+LOG_FILE = f'checkpoints/log_{MODEL}.txt'
+LOG_FILE_TEST = f'checkpoints/log_{MODEL}_test.txt'
 
 ####################################################
 # PyTorch
 ####################################################
 # Dataloading / Speakers
 NUM_WORKERS = 8
-SPEAKER_N = 5
-SPEAKER_M = 4
+SPEAKER_N = 8
+SPEAKER_M = 8
+SPEAKER_U = 45
