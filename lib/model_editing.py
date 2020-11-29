@@ -80,7 +80,7 @@ Returns:
 
 
 def fine_tune_model(model=None, output_dim=None, strategy=0,
-                    deepcopy=False, *args, **kwargs):
+                    deepcopy=False, frozen_conv=1, *args, **kwargs):
     """Fine tune a given model.
 
 # Arguments:
@@ -97,6 +97,11 @@ def fine_tune_model(model=None, output_dim=None, strategy=0,
             * 1 : Return a model that updates all its `Linear`
                     weights only and has new output dimension.
 
+            * 2 : Return a model that updates all its weights
+                    except the `conv_frozen`-first Conv2d() layers and has new
+                    output dimension.
+
+
         deepcopy {bool} : If `True` a copy of `model` is returned.
                             Otherwise `model` is updated by reference
                             and returned.
@@ -109,7 +114,7 @@ def fine_tune_model(model=None, output_dim=None, strategy=0,
     if deepcopy is True:
         model = copy.deepcopy(model)
 
-    if strategy == 0: # Train the entire model
+    if strategy == 0:  # Train the entire model
         # Get all layers
         model_layers = [y for x in model.children() for y in x.children()]
         if model_layers == []:
@@ -118,7 +123,7 @@ def fine_tune_model(model=None, output_dim=None, strategy=0,
             raise NotImplementedError()
         named_children = list(model.named_children())
 
-    elif strategy == 1: # Train only linear layers
+    elif strategy == 1:  # Train only linear layers
         # Freeze all layers except for the linear
         model_layers = [y for x in model.children() for y in x.children()]
         if model_layers == []:
@@ -136,6 +141,34 @@ def fine_tune_model(model=None, output_dim=None, strategy=0,
                     try:
                         nested_layer.bias.requires_grad = False
                         nested_layer.weight.requires_grad = False
+                    except Exception as e:
+                        raise e("Error while trying to turn off gradients.")
+    elif strategy == 2:  # Train all except the `frozen_conv`-first conv
+        # Get rid of some errors
+        assert (frozen_conv > 0)
+        # Freeze all layers except for the linear
+        model_layers = [y for x in model.children() for y in x.children()]
+        if model_layers == []:
+            raise NotImplementedError()
+        named_children = list(model.named_children())
+        for seq_layername, seq_layer in named_children:
+            # Find all Conv2d layers and freeze weights
+            if any([isinstance(c, torch.nn.Conv2d)
+                    for c in seq_layer.children()]):
+                for nested_layer in seq_layer.children():
+                    # Skip all except Conv2d
+                    if not isinstance(nested_layer, torch.nn.Conv2d):
+                        continue
+                    # Set grad off for bias as well as weights
+                    try:
+                        # If all  required conv layer have already been
+                        # frozen, continue
+                        if frozen_conv == 0:
+                            continue
+                        nested_layer.bias.requires_grad = False
+                        nested_layer.weight.requires_grad = False
+                        # Reduce number of remaining frozen conv layers
+                        frozen_conv -= 1
                     except Exception as e:
                         raise e("Error while trying to turn off gradients.")
 
