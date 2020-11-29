@@ -18,10 +18,7 @@ DATASET_FOLDER = "emodb/wav/"
 
 # Stored variables
 VARIABLES_FOLDER = "variables/"
-<< << << < HEAD
-DETERMINISTIC = True
-== == == =
->>>>>> > Add all different wavs per speaker in one epoch
+DETERMINISTIC = False
 RECOMPUTE = True
 
 # Sampling process
