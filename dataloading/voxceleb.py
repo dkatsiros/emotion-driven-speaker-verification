@@ -113,6 +113,9 @@ class Voxceleb1_Evaluation_PreComputedMelSpectr(Dataset):
                  path_to_speakers='',
                  max_seq_len=None, fixed_length=True, fe_method="MEL_SPECTROGRAM",
                  *args, **kwargs):
+        self.fe_method = fe_method
+        self.fixed_length = fixed_length
+        self.max_seq_len = max_seq_len
         # Read the data from file
         with open(test_file_path, mode="r") as file:
             data_raw = file.readlines()
@@ -126,12 +129,13 @@ class Voxceleb1_Evaluation_PreComputedMelSpectr(Dataset):
         self.files1 = [os.path.join(path_to_test, f.strip()) for f in files1]
         self.files2 = [os.path.join(path_to_test, f.strip()) for f in files2]
         # convert to npy paths
-        self.files1 = list(map(lambda x: x[:-4]+'.npy', self.files1))
-        self.files2 = list(map(lambda x: x[:-4]+'.npy', self.files2))
+        self.files1 = list(map(lambda x: x[:-4]+'_mel.npy', self.files1))
+        self.files2 = list(map(lambda x: x[:-4]+'_mel.npy', self.files2))
         # make sure that all files exist and that none path is broken
         assert(all([os.path.exists(file) for file in self.files1+self.files2]))
         # typecasting str to integers
-        self.labels = list(map(int, labels))
+        self.labels = np.array(list(map(int, labels)), dtype=np.int8)
+        assert all([l in [0, 1] for l in labels])
 
     def __len__(self):
         return self.n_evaluations
@@ -143,7 +147,7 @@ class Voxceleb1_Evaluation_PreComputedMelSpectr(Dataset):
         features = self.zero_pad_and_stack([np.load(u) for u in [u1, u2]])
         # return 2 tensors
         # input_features(u1,u2) and label
-        return torch.Tensor(features), torch.Tensor(label)
+        return torch.tensor(features), torch.tensor(label)
 
     def zero_pad_and_stack(self, X):
         """
