@@ -17,7 +17,7 @@ class CNNFusionModel(nn.Module):
 
         # Cut last emotional features
         self.emotional_model = drop_layers(model=emotional_model,
-                                           layers_droped=layers_dropped)
+                                           layers_dropped=layers_dropped)
         # Get dimensions
         _, emotional_out_dim = last_linear_layer_dimensions(
             self.emotional_model)
@@ -82,7 +82,7 @@ class CNNFusionModel(nn.Module):
         emotional_embeddings = self.emotional_model(x)
 
         # Concatenate emotional and speaker discriminative information
-        out = torch.cat((out, emotional_embeddings))
+        out = torch.cat((out, emotional_embeddings), dim=1)
         # Last forward pass using emotional + SV information
         # (1024 + #emot_embedding=256) -> 256
         out = self.linear_layer2(out)
