@@ -21,7 +21,7 @@ from lib.model_editing import drop_layers, print_require_grad_parameter
 from lib.sound_processing import compute_max_sequence_length, compute_sequence_length_distribution
 from lib.training import train_and_validate, test, results, overfit_batch
 from lib.training import deterministic_model
-from models.SpeechEmbedder import CNNSpeechEmbedder
+from models.emotional_verification_fusion import CNNFusionModel
 from dataloading.voxceleb import Voxceleb1, Voxceleb1PreComputedMelSpectr, Voxceleb1_Evaluation_PreComputedMelSpectr
 from utils.load_dataset import load_VoxCeleb
 
@@ -213,13 +213,11 @@ def train_voxceleb():
         except Exception as model_can_not_be_restored:
             raise FileNotFoundError from model_can_not_be_restored
     else:
-        model = CNNSpeechEmbedder(height=height,
-                                  width=width).to(device)
-
-    # Remove final linear layer
-    # making output 256 dimension
-    model = drop_layers(model, 1)
-    print_require_grad_parameter(model)
+        emotional_model = torch.load(config.MODEL_TO_RESTORE)
+        model = CNNFusionModel(height=height,
+                               width=width,
+                               emotional_model=emotional_model,
+                               layers_dropped=1).to(device)
 
     print(f'Running on: {device}.\n')
     # logging & parameters
