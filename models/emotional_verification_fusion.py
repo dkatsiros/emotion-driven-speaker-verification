@@ -1,19 +1,24 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from lib.model_editing import drop_layers, last_linear_layer_dimensions
+from lib.model_editing import drop_layers, last_linear_layer_dimensions, model_no_grad
 
 
 class CNNFusionModel(nn.Module):
     def __init__(self, height, width, proj=256, first_channels=32, kernel_size=5,
-                 emotional_model=None, layers_dropped=1):
+                 emotional_model=None, layers_dropped=1, emotional_training=False):
         super(CNNFusionModel, self).__init__()
         self.num_cnn_layers = 3
         self.cnn_channels = 2
         self.height = height
         self.width = width
         self.first_channels = first_channels
-        self.emotional_model = emotional_model
+
+        # Emotional layer details
+        if emotional_training is False:
+            self.emotional_model = model_no_grad(emotional_model)
+        else:
+            self.emotional_model = emotional_model
 
         # Cut last emotional features
         self.emotional_model = drop_layers(model=emotional_model,
@@ -22,6 +27,7 @@ class CNNFusionModel(nn.Module):
         _, emotional_out_dim = last_linear_layer_dimensions(
             self.emotional_model)
 
+        # Speaker Verification Layers
         self.layer1 = nn.Sequential(
             nn.Conv2d(1,
                       first_channels,

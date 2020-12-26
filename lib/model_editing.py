@@ -143,6 +143,7 @@ def fine_tune_model(model=None, output_dim=None, strategy=0,
                         nested_layer.weight.requires_grad = False
                     except Exception as e:
                         raise e("Error while trying to turn off gradients.")
+
     elif strategy == 2:  # Train all except the `frozen_conv`-first conv
         # Get rid of some errors
         assert (frozen_conv > 0)
@@ -208,3 +209,22 @@ def last_linear_layer_dimensions(model):
             for nested_layer in seq_layer.children():
                 if isinstance(nested_layer, torch.nn.Linear):
                     return nested_layer.in_features, nested_layer.out_features
+
+
+def model_no_grad(model):
+    """Disable all gradients of a given model."""
+    # Freeze all layers except for the linear
+    model_layers = [y for x in model.children() for y in x.children()]
+    if model_layers == []:
+        raise NotImplementedError()
+    named_children = list(model.named_children())
+    for seq_layername, seq_layer in named_children:
+        # Find all Conv2d layers and freeze weights
+        for nested_layer in seq_layer.children():
+            # Set grad off for bias as well as weights
+            try:
+                nested_layer.bias.requires_grad = False
+                nested_layer.weight.requires_grad = False
+            except:
+                pass
+    return model
