@@ -8,19 +8,21 @@ import logging
 # External imports
 import torch
 from torch.utils.data import DataLoader
+import numpy as np
 import glob2 as glob
 from tqdm import tqdm
 
 # Relative imports
 import config
 from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
+from lib.metrics import tuneThresholdfromScore
 from lib.loss import GE2ELoss
 from lib.model_editing import drop_layers, print_require_grad_parameter
 from lib.sound_processing import compute_max_sequence_length, compute_sequence_length_distribution
 from lib.training import train_and_validate, test, results, overfit_batch
 from lib.training import deterministic_model
 from models.SpeechEmbedder import CNNSpeechEmbedder
-from dataloading.voxceleb import Voxceleb1, Voxceleb1PreComputedMelSpectr
+from dataloading.voxceleb import Voxceleb1, Voxceleb1PreComputedMelSpectr, Voxceleb1_Evaluation_PreComputedMelSpectr
 from utils.load_dataset import load_VoxCeleb
 
 
@@ -104,91 +106,62 @@ def validate_se(e, dataloader, model, loss_function, *args, **kwargs):
 
 def test_se(model, dataloader, testing_epochs=10):
     """Implementing test for speaker verification. Metric average Equal Error Rate."""
-    from lib.loss import get_centroids, get_cossim
     # obtain the model's device ID
     device = next(model.parameters()).device
 
-    avg_EER = 0
+    avg_EER = []
+    avg_EER_ = []
     for e in range(testing_epochs):
         batch_avg_EER = 0
-        for batch_id, batch in enumerate(tqdm(dataloader)):
-            # utterances should be even number to split exactly in two
-            assert config.SPEAKER_M % 2 == 0
+        batch_avg_EER_ = 0
+        # dataloader: (batch_size,2,max_seq_len,input_fe)
+        for batch_id, (batch, labels) in enumerate(tqdm(dataloader)):
             # move to device
-            batch = batch.to(device)
-            # Seperate batch in M/2 and M/2 utterances per speaker
-            enrollment_batch, verification_batch = torch.split(
-                batch, int(config.SPEAKER_M/2), dim=1)
-            # Reshape to (N*M,seq_len,features)
-            enrollment_batch = torch.reshape(enrollment_batch,
-                                             (config.SPEAKER_N*config.SPEAKER_M//2,
-                                              1,
-                                              enrollment_batch.size(2),
-                                              enrollment_batch.size(3)))
-            verification_batch = torch.reshape(verification_batch,
-                                               (config.SPEAKER_N*config.SPEAKER_M//2,
-                                                1,
-                                                verification_batch.size(2),
-                                                verification_batch.size(3)))
-            # Shuffle verification batch
-            perm = random.sample(
-                range(0, verification_batch.size(0)), verification_batch.size(0))
-            unperm = list(perm)
-            for i, j in enumerate(perm):
-                unperm[j] = i
-            verification_batch = verification_batch[perm]
+            batch = batch.to(device, dtype=torch.float)
+            labels = labels.to(device)
+            # prepare for forward pass
+            batch = torch.reshape(batch,
+                                  (batch.size(0)*2, 1, batch.size(2), batch.size(3)))
+            # pass the batch through the model
+            embeddings = model(batch)
+            # reshape to the original (batch_size,2,fe)
+            embeddings = torch.reshape(embeddings,
+                                       (batch.size(0)//2, 2, -1))
+            # split to e1 & e2 for each test pair
+            enrollment, verification = torch.split(embeddings,
+                                                   1,  # split_size
+                                                   dim=1)  # final 2* (batch_size,1,out_dim)
+            enrollment = torch.squeeze()  # reduce dim=1
+            verification = torch.squeeze()  # reduce dim=1
+            # compute the cosine similarity (batch_size,1)
+            cossim = torch.nn.functional.cosine_similarity(enrollment,
+                                                           verification)
 
-            # Forward through the network
-            enrollment_embeddings = model(enrollment_batch)
-            verification_embeddings = model(verification_batch)
+            # batch and labels back to cpu
+            batch.cpu()
+            labels.cpu()
 
-            # Unshuffle
-            verification_embeddings = verification_embeddings[unperm]
+            # Fast EER computation
+            tunedThreshold, batch_EER, batch_EER_mean, fpr, fnr = tuneThresholdfromScore(cossim.cpu().detach(),
+                                                                                         labels.cpu(),
+                                                                                         [1, 0.1])
+            # eer=(far + frr)/2
+            batch_avg_EER_ = (batch_id * batch_avg_EER_ +
+                              batch_EER_mean)/(batch_id+1)
+            # eer=max(far+frr)
+            batch_avg_EER = (batch_id * batch_avg_EER + batch_EER)/(batch_id+1)
 
-            # Restore shape (N,M,seq_len,features)
-            enrollment_embeddings = torch.reshape(enrollment_embeddings,
-                                                  (config.SPEAKER_N,
-                                                   config.SPEAKER_M//2,
-                                                   enrollment_embeddings.size(1)))
-            verification_embeddings = torch.reshape(verification_embeddings,
-                                                    (config.SPEAKER_N,
-                                                     config.SPEAKER_M//2,
-                                                     verification_embeddings.size(1)))
+            logging.info(f"\nEER (epoch:{ e+1 }): {batch_avg_EER:.2f}")
+            logging.info(f"\navg_EER (epoch:{ e+1 }): {batch_avg_EER_:.2f}")
 
-            enrollment_centroids = get_centroids(enrollment_embeddings)
+        # Get mean of #testing_epochs EER
+        avg_EER.append(batch_avg_EER)
+        avg_EER_.append(batch_avg_EER_)
 
-            sim_matrix = get_cossim(embeddings=verification_embeddings,
-                                    centroids=enrollment_centroids)
-
-            # calculating EER
-            diff = 1
-            EER = 0
-            EER_thresh = 0
-            EER_FAR = 0
-            EER_FRR = 0
-
-            for thres in [0.01*i+0.5 for i in range(50)]:
-                sim_matrix_thresh = sim_matrix > thres
-
-                FAR = (sum([sim_matrix_thresh[i].float().sum()-sim_matrix_thresh[i, :, i].float().sum() for i in range(int(config.SPEAKER_N))])
-                       / (config.SPEAKER_N-1.0)/(float(config.SPEAKER_M/2))/config.SPEAKER_N)
-
-                FRR = (sum([config.SPEAKER_M/2-sim_matrix_thresh[i, :, i].float().sum() for i in range(int(config.SPEAKER_N))])
-                       / (float(config.SPEAKER_M/2))/config.SPEAKER_N)
-
-                # Save threshold when FAR = FRR (=EER)
-                if diff > abs(FAR-FRR):
-                    diff = abs(FAR-FRR)
-                    EER = (FAR+FRR)/2
-                    EER_thresh = thres
-                    EER_FAR = FAR
-                    EER_FRR = FRR
-            batch_avg_EER += EER
-            logging.info("\nEER : %0.2f (thres:%0.2f, FAR:%0.2f, FRR:%0.2f)" %
-                         (EER, EER_thresh, EER_FAR, EER_FRR))
-        avg_EER += batch_avg_EER/(batch_id+1)
-    avg_EER = avg_EER / testing_epochs
-    print("\n EER across {0} epochs: {1:.4f}".format(testing_epochs, avg_EER))
+    print("\n EER across {0} epochs: {1:.4f} +- {2:.4f}".format(
+        testing_epochs, np.mean(avg_EER), np.std(avg_EER)))
+    print("\n avg_EER across {0} epochs: {1:.4f} +- {2:.4f}".format(
+        testing_epochs, np.mean(avg_EER_), np.std(avg_EER_)))
 
 
 def train_voxceleb():
@@ -281,21 +254,17 @@ def train_voxceleb():
 def test_voxceleb(max_seq_len=245):
     """Load datasets, init models and test on VoxCeleb dataset."""
 
-    # Split dataset to arrays
-    _, test_speakers, _ = load_VoxCeleb(validation=False)
-
     fe_method = "MEL_SPECTROGRAM" if config.CNN_BOOLEAN is True else "MFCC"
-    dataset_func = Voxceleb1PreComputedMelSpectr if config.PRECOMPUTED_MELS is True else Voxceleb1
+    dataset_func = Voxceleb1_Evaluation_PreComputedMelSpectr if config.PRECOMPUTED_MELS is True else Voxceleb1
     # Test dataloader
-    test_dataset = dataset_func(X=test_speakers,
-                                test=True,
+    test_dataset = dataset_func(test_file_path=config.TEST_FILE_PATH,
                                 fe_method=fe_method,
                                 max_seq_len=max_seq_len)
-    test_loader = DataLoader(test_dataset, batch_size=config.SPEAKER_N,
-                             shuffle=False, num_workers=config.NUM_WORKERS, drop_last=True)
+    test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,
+                             shuffle=True, num_workers=config.NUM_WORKERS, drop_last=False)
 
-    N, M, width, height = next(iter(test_loader)).size()
-
+    batch_, label_ = next(iter(test_loader)).size()
+    (N, M, width, height), label_size = batch_.size(), label_.size()
     # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f'Selected Batch Size: {config.BATCH_SIZE}')
