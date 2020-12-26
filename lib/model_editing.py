@@ -192,3 +192,19 @@ def fine_tune_model(model=None, output_dim=None, strategy=0,
             break
 
     return model
+
+
+def last_linear_layer_dimensions(model):
+    """Return input and output dimensions of the last linear layer."""
+
+    model_layers = [y for x in model.children() for y in x.children()]
+    if model_layers == []:
+        raise NotImplementedError()
+    named_children = list(model.named_children())
+    for seq_layername, seq_layer in named_children[::-1]:
+        if any([isinstance(c, torch.nn.Linear)
+                for c in seq_layer.children()]):
+            newlayer = []
+            for nested_layer in seq_layer.children():
+                if isinstance(nested_layer, torch.nn.Linear):
+                    return nested_layer.in_features, nested_layer.out_features
