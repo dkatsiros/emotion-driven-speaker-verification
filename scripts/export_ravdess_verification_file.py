@@ -1,4 +1,5 @@
 """Create a test file for speaker verification using RAVDESS dataset"""
+import os
 from random import shuffle
 from utils.load_dataset import load_RAVDESS
 
@@ -7,7 +8,8 @@ def export_verification_file(pairs=None, path='./temp.txt'):
     with open(file=path, mode="w") as file:
         for pair in pairs:
             label, u1, u2 = pair
-        file.write(f"{label} {u1} {u2}\n")
+            file.write(f"{label} {u1} {u2}\n")
+    print(f'Export finished for {path}')
 
 
 # Load dataset where each label is a list containing
@@ -16,6 +18,8 @@ def export_verification_file(pairs=None, path='./temp.txt'):
 # repetition, actor]
 X, y = load_RAVDESS(train_only=True, labels_only=False)
 
+# Remove dataset path from sample paths
+X = [x.replace("datasets/ravdess/", "") for x in X]
 # Get labels casting string to int-1
 # 0 = neutral, 1 = calm, 2 = happy, 3 = sad,
 # 4 = angry, 5 = fearful, 6 = disgust, 7 = surprised
@@ -95,6 +99,8 @@ for idx_neutral in range(len(X_neutral)):
 # shuffle
 shuffle(pairs_norm)
 shuffle(pairs_strong)
+# Create path folder
+os.makedirs('datasets/ravdess/veri_files/', exist_ok=True)
 # Create a file as [labels, files1, files2]
 export_verification_file(pairs=pairs_norm,
                          path="datasets/ravdess/veri_files/veri_test_exp1.1.txt")
