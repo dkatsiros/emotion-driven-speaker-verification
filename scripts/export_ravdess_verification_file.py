@@ -97,7 +97,7 @@ shuffle(pairs_norm)
 shuffle(pairs_strong)
 # Create a file as [labels, files1, files2]
 export_verification_file(pairs=pairs_norm,
-                         path="datasets/ravdess/veri_test_exp1.1.txt")
+                         path="datasets/ravdess/veri_files/veri_test_exp1.1.txt")
 
 export_verification_file(pairs=pairs_norm,
-                         path="datasets/ravdess/veri_test_exp1.2.txt")
+                         path="datasets/ravdess/veri_files/veri_test_exp1.2.txt")

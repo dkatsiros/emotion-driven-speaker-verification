@@ -191,7 +191,7 @@ def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_
         filenames.extend(glob.glob(os.path.join(actor, '*.wav')))
 
     for file in filenames:
-        label = ravdess.read_file_identifiers(file, labels_only=True)
+        label = ravdess.read_file_identifiers(file, labels_only=labels_only)
         labels.append(label)
 
     if train_only is True:

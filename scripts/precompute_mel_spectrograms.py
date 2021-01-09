@@ -11,7 +11,6 @@ class PreComputeMelSpectrograms():
     """Fast computing of mel spectrograms in python"""
 
     def __init__(self, paths, *args, **kwargs):
-        self.max_seq_len = max_seq_len
         self.fixed_length = True
         for path in paths:
             print(f"Loading {path}...")
