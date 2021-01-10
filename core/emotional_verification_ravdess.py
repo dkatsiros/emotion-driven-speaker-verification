@@ -59,8 +59,8 @@ def test_se(model, dataloader, testing_epochs=10):
             enrollment, verification = torch.split(embeddings,
                                                    1,  # split_size
                                                    dim=1)  # final 2* (batch_size,1,out_dim)
-            enrollment = torch.squeeze()  # reduce dim=1
-            verification = torch.squeeze()  # reduce dim=1
+            enrollment = torch.squeeze(enrollment)  # reduce dim=1
+            verification = torch.squeeze(verification)  # reduce dim=1
             # compute the cosine similarity (batch_size,1)
             cossim = torch.nn.functional.cosine_similarity(enrollment,
                                                            verification)
@@ -104,7 +104,7 @@ def test_ravdess(max_seq_len=245):
     test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,
                              shuffle=True, num_workers=config.NUM_WORKERS, drop_last=False)
 
-    batch_, label_ = next(iter(test_loader)).size()
+    batch_, label_ = next(iter(test_loader))
     (N, M, width, height), label_size = batch_.size(), label_.size()
     # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -125,7 +125,7 @@ def test_ravdess(max_seq_len=245):
     # Evaluation mode -gradients update off
     model.eval()
     # ===== TEST =====
-    test_se(model, test_loader, testing_epochs=50)
+    test_se(model, test_loader, testing_epochs=5)
 
 
 if __name__ == "__main__":
