@@ -125,7 +125,7 @@ def test_ravdess(max_seq_len=245):
     # Evaluation mode -gradients update off
     model.eval()
     # ===== TEST =====
-    test_se(model, test_loader, testing_epochs=5)
+    test_se(model, test_loader, testing_epochs=50)
 
 
 if __name__ == "__main__":

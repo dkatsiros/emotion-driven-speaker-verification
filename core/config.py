@@ -40,8 +40,10 @@ REPORTS_FOLDER = 'plotting/reports/'
 ######
 TRAINING = True
 RESTORE_FROM_PREVIOUS_MODEL = True
-MODEL_TO_RESTORE = "checkpoints/emotional_iemocap.pt"
-TEST_FILE_PATH = 'datasets/voxceleb1/test/veri_test2.txt'
+# MODEL_TO_RESTORE = "checkpoints/emotional_iemocap.pt"
+# TEST_FILE_PATH = 'datasets/voxceleb1/veri_test2.txt'
+MODEL_TO_RESTORE = "checkpoints/voxceleb_lr=.5e-4.pt"
+TEST_FILE_PATH = 'datasets/ravdess/veri_files/veri_test_exp1.2.txt'
 # Learning
 EPOCHS = 900
 VALID_FREQ = 5
