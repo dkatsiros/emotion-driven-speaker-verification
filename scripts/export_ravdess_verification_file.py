@@ -52,37 +52,14 @@ for i in range(len(X)):
     sp, em, st, inte, rep = x_contains[i]
     idx[sp, em, st, inte, rep] = i
 
-# print(idx[23, 7, 1, 1, 1])
-# exit()
 # INITIALIZE
 # neutral samples
 X_neutral = []
-speaker_id_neutral = []
 # normal emotion samples
 X_norm = []
-speaker_id_norm = []
-emotion_norm = []
 # strong emotion samples
 X_strong = []
-speaker_id_strong = []
-emotion_strong = []
 
-for x, emotion, intensity, spkr in zip(X, emotion, emotional_intensity, speaker_id):
-    # neutral has no intensity
-    if emotion == 0:
-        X_neutral.append(x)
-        speaker_id_neutral.append(spkr)
-    else:
-        # normal intensity
-        if intensity == 0:
-            X_norm.append(x)
-            speaker_id_norm.append(spkr)
-            emotion_norm.append(emotion)
-        # strong intensity
-        else:
-            X_strong.append(x)
-            speaker_id_strong.append(spkr)
-            emotion_strong.append(emotion)
 
 # NORMAL EMOTION IN ENROLLEMENT UTTERANCE
 # VERIFICATION UTTERANCE IS "EMOTION FREE"
