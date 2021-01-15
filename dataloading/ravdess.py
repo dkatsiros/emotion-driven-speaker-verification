@@ -20,7 +20,9 @@ class RAVDESS_Evaluation_PreComputedMelSpectr(Dataset):
     def __init__(self, test_file_path="datasets/ravdess/veri_files/veri_test_exp1.1.txt",
                  path_to_speakers='',
                  max_seq_len=None, fixed_length=True, fe_method="MEL_SPECTROGRAM",
+                 details=False,
                  *args, **kwargs):
+        self.details = details
         self.fe_method = fe_method
         self.fixed_length = fixed_length
         self.max_seq_len = max_seq_len
@@ -55,6 +57,18 @@ class RAVDESS_Evaluation_PreComputedMelSpectr(Dataset):
         features = self.zero_pad_and_stack([np.load(u) for u in [u1, u2]])
         # return 2 tensors
         # input_features(u1,u2) and label
+        if self.details is True:
+            # get speaker id
+            sp1, sp2 = [int(os.path.dirname(path).split("/")[-1].split("_")[-1])-1
+                        for path in [self.files1[idx], self.files2[idx]]]
+            # get emotion label
+            em1, em2 = [int(os.path.abspath(path).split("/")[-1].split("-")[2])-1
+                        for path in [self.files1[idx], self.files2[idx]]]
+            st1, st2 = [int(os.path.abspath(path).split("/")[-1].split("-")[4])-1
+                        for path in [self.files1[idx], self.files2[idx]]]
+            rep1, rep2 = [int(os.path.abspath(path).split("/")[-1].split("-")[5])-1
+                          for path in [self.files1[idx], self.files2[idx]]]
+            return torch.tensor(features), torch.tensor(label), [sp1, sp2], [em1, em2], [st1, st2], [rep1, rep2]
         return torch.tensor(features), torch.tensor(label)
 
     def zero_pad_and_stack(self, X):
