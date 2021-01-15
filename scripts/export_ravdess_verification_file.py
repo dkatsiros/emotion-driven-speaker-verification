@@ -60,6 +60,9 @@ X_norm = []
 # strong emotion samples
 X_strong = []
 
+#####################
+# EXPERIMENT 1
+#####################
 
 # NORMAL EMOTION IN ENROLLEMENT UTTERANCE
 # VERIFICATION UTTERANCE IS "EMOTION FREE"
@@ -85,7 +88,7 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
     # but this time from another speaker
     enrollment = X[idx[diff_sp, em, st, 0, rep]]  # with emotion
     verification = X[idx[sp, 0, st, 0, rep]]  # no emotion,intens
-    # same speaker so label=1
+    # same speaker so label=0
     pairs_norm.append((0, enrollment, verification))
 
 pairs_strong = []
@@ -108,8 +111,90 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
     # but this time from another speaker
     enrollment = X[idx[diff_sp, em, st, 1, rep]]  # with emotion
     verification = X[idx[sp, 0, st, 0, rep]]  # no emotion,intens
-    # same speaker so label=1
+    # same speaker so label=0
     pairs_strong.append((0, enrollment, verification))
+
+#####################
+# RUN EXPERIMENT 1
+#####################
+
+# # shuffle
+# shuffle(pairs_norm)
+# shuffle(pairs_strong)
+# # Create path folder
+# os.makedirs('datasets/ravdess/veri_files/', exist_ok=True)
+# # Create a file as [labels, files1, files2]
+# export_verification_file(pairs=pairs_norm,
+#                          path="datasets/ravdess/veri_files/veri_test_exp1.1.txt")
+
+# export_verification_file(pairs=pairs_strong,
+#                          path="datasets/ravdess/veri_files/veri_test_exp1.2.txt")
+
+
+########################
+# EXPERIMENT 2
+########################
+
+# NORMAL EMOTION IN ENROLLEMENT UTTERANCE
+# VERIFICATION UTTERANCE IS "EMOTION FREE"
+# a list of tuples (label,utterance_1,utterance2)
+# which we will evaluate during test time for verification
+pairs_norm = []
+# Outer product to reduce time
+for sp, em, em2, st, rep in itertools.product(range(SPEAKERS),
+                                              range(1, EMOTIONS),
+                                              range(1, EMOTIONS),
+                                              range(STATEMENTS),
+                                              range(REPETITIONS)):
+    # take all the emotions over the diagonal
+    # of the matrix EMOTIONS @ EMOTIONS
+    if em > em2:
+        # Same speaker
+        enrollment = X[idx[sp, em, st, 0, rep]]  # with emotion
+        verification = X[idx[sp, em2, st, 0, rep]]  # no emotion, no intens
+        # add pair with the same speaker, so label=1
+        pairs_norm.append((1, enrollment, verification))
+
+        # create a list without `sp` speaker id to pick from
+        left_speakers = list(range(0, sp)) + list(range(sp+1, SPEAKERS))
+        # add a different speaker (label=0)
+        diff_sp = int(np.random.choice(left_speakers, 1))
+        # Normal-emotionally enrollment utterance
+        # but this time from another speaker
+        enrollment = X[idx[diff_sp, em, st, 0, rep]]  # with emotion
+        verification = X[idx[sp, em2, st, 0, rep]]  # no emotion,intens
+        # same speaker so label=0
+        pairs_norm.append((0, enrollment, verification))
+
+pairs_strong = []
+# Outer product to reduce time
+for sp, em, em2, st, rep in itertools.product(range(SPEAKERS),
+                                              range(1, EMOTIONS),
+                                              range(1, EMOTIONS),
+                                              range(STATEMENTS),
+                                              range(REPETITIONS)):
+    # take all the emotions over the diagonal
+    # of the matrix EMOTIONS @ EMOTIONS
+    if em > em2:
+        # Same speaker
+        enrollment = X[idx[sp, em, st, 1, rep]]  # high intensity
+        verification = X[idx[sp, em2, st, 1, rep]]  # high intensity
+        # add pair with the same speaker, so label=1
+        pairs_strong.append((1, enrollment, verification))
+
+        # create a list without `sp` speaker id to pick from
+        left_speakers = list(range(0, sp)) + list(range(sp+1, SPEAKERS))
+        # add a different speaker (label=0)
+        diff_sp = int(np.random.choice(left_speakers, 1))
+        # but this time from another speaker
+        enrollment = X[idx[diff_sp, em, st, 1, rep]]  # high intensity
+        verification = X[idx[sp, em2, st, 1, rep]]  # high intensity
+        # diff speaker => label=0
+        pairs_strong.append((0, enrollment, verification))
+
+#####################
+# RUN EXPERIMENT 2
+#####################
 
 # shuffle
 shuffle(pairs_norm)
@@ -118,7 +203,7 @@ shuffle(pairs_strong)
 os.makedirs('datasets/ravdess/veri_files/', exist_ok=True)
 # Create a file as [labels, files1, files2]
 export_verification_file(pairs=pairs_norm,
-                         path="datasets/ravdess/veri_files/veri_test_exp1.1.txt")
+                         path="datasets/ravdess/veri_files/veri_test_exp2.1.txt")
 
 export_verification_file(pairs=pairs_strong,
-                         path="datasets/ravdess/veri_files/veri_test_exp1.2.txt")
+                         path="datasets/ravdess/veri_files/veri_test_exp2.2.txt")
