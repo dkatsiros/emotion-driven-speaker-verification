@@ -218,7 +218,7 @@ for sp, em, em2, st, rep in itertools.product(range(SPEAKERS),
 # which we will evaluate during test time for verification
 # each list this time contains a different emotion on verification
 # while we keep enrollment utterance neutral
-pairs_norm = [[]]*(EMOTIONS-1)
+pairs_norm = [[] for i in range(EMOTIONS-1)]
 # Outer product to reduce time
 for sp, em, st, rep in itertools.product(range(SPEAKERS),
                                          range(1, EMOTIONS),
@@ -228,7 +228,7 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
     enrollment = X[idx[sp, em, st, 0, rep]]  # with emotion
     verification = X[idx[sp, 0, st, 0, rep]]  # no emotion, no intens
     # add pair with the same speaker, so label=1
-    pairs_norm[em].append((1, enrollment, verification))
+    pairs_norm[em-1].append((1, enrollment, verification))
 
     # create a list without `sp` speaker id to pick from
     left_speakers = list(range(0, sp)) + list(range(sp+1, SPEAKERS))
@@ -239,9 +239,9 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
     enrollment = X[idx[diff_sp, em, st, 0, rep]]  # with emotion
     verification = X[idx[sp, 0, st, 0, rep]]  # no emotion,intens
     # same speaker so label=0
-    pairs_norm[em].append((0, enrollment, verification))
+    pairs_norm[em-1].append((0, enrollment, verification))
 
-pairs_strong = [[]]*(EMOTIONS-1)
+pairs_strong = [[] for i in range(EMOTIONS-1)]
 # Outer product to reduce time
 for sp, em, st, rep in itertools.product(range(SPEAKERS),
                                          range(1, EMOTIONS),
@@ -251,7 +251,7 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
     enrollment = X[idx[sp, em, st, 1, rep]]  # with emotion
     verification = X[idx[sp, 0, st, 0, rep]]  # no emotion, no intens
     # add pair with the same speaker, so label=1
-    pairs_strong[em].append((1, enrollment, verification))
+    pairs_strong[em-1].append((1, enrollment, verification))
 
     # create a list without `sp` speaker id to pick from
     left_speakers = list(range(0, sp)) + list(range(sp+1, SPEAKERS))
@@ -262,7 +262,7 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
     enrollment = X[idx[diff_sp, em, st, 1, rep]]  # with emotion
     verification = X[idx[sp, 0, st, 0, rep]]  # no emotion,intens
     # same speaker so label=0
-    pairs_strong[em].append((0, enrollment, verification))
+    pairs_strong[em-1].append((0, enrollment, verification))
 
 #####################
 # RUN EXPERIMENT 3
@@ -275,8 +275,10 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
 # os.makedirs('datasets/ravdess/veri_files/', exist_ok=True)
 # # Create a file as [labels, files1, files2]
 for emotion, pairs in enumerate(pairs_norm, 1):
+    shuffle(pairs)
     export_verification_file(pairs=pairs,
                              path=f"datasets/ravdess/veri_files/veri_test_exp3.1.{emotion}.txt")
 for emotion, pairs in enumerate(pairs_strong, 1):
-    export_verification_file(pairs=pairs_strong,
+    shuffle(pairs)
+    export_verification_file(pairs=pairs,
                              path=f"datasets/ravdess/veri_files/veri_test_exp3.2.{emotion}.txt")
