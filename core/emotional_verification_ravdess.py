@@ -94,19 +94,23 @@ def test_se(model, dataloader, testing_epochs=10):
         avg_EER.append(epoch_avg_EER)
         avg_mindcf.append(batch_mindcf)
 
-    print("\n avg_EER across {0} epochs: {1:.4f} +- {2:.4f}".format(
+    print("\n avg_EER across {0} epochs: {1:.2f} \pm {2:.2f}".format(
         testing_epochs, np.mean(avg_EER), np.std(avg_EER)))
-    print("\n min_dcf across {0} epochs: {1:.4f} +- {2:.4f}".format(
+    print("\n min_dcf across {0} epochs: {1:.2f} \pm {2:.2f}".format(
         testing_epochs, np.mean(avg_mindcf), np.std(avg_mindcf)))
+    return (round(np.mean(avg_EER), 2), round(np.std(avg_EER), 2),
+            round(np.mean(avg_mindcf), 4), round(np.std(avg_mindcf), 4))
 
 
-def test_ravdess(max_seq_len=245):
+def test_ravdess(model=config.MODEL_TO_RESTORE,
+                 verification_file=config.TEST_FILE_PATH,
+                 max_seq_len=245):
     """Load datasets, init models and test on VoxCeleb dataset."""
 
     fe_method = "MEL_SPECTROGRAM" if config.CNN_BOOLEAN is True else "MFCC"
     dataset_func = RAVDESS_Evaluation_PreComputedMelSpectr
     # Test dataloader
-    test_dataset = dataset_func(test_file_path=config.TEST_FILE_PATH,
+    test_dataset = dataset_func(test_file_path=verification_file,
                                 fe_method=fe_method,
                                 max_seq_len=max_seq_len)
     test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,
@@ -120,7 +124,7 @@ def test_ravdess(max_seq_len=245):
 
     # Restore trained model
     try:
-        model = torch.load(config.MODEL_TO_RESTORE, map_location=device)
+        model = torch.load(model, map_location=device)
     except Exception as model_can_not_be_restored:
         raise FileNotFoundError from model_can_not_be_restored
 
@@ -133,7 +137,9 @@ def test_ravdess(max_seq_len=245):
     # Evaluation mode -gradients update off
     model.eval()
     # ===== TEST =====
-    test_se(model, test_loader, testing_epochs=50)
+    mean_eer, std_eer, mean_dcf, std_dcf = test_se(
+        model, test_loader, testing_epochs=50)
+    return mean_eer, std_eer, mean_dcf, std_dcf
 
 
 def export_visual_representation_2D(ofile=None):
@@ -227,14 +233,87 @@ def visualize(ifile, ofile):
     # pca.fit
 
 
+def test_ravdess_and_export(model=None, verification_file=None, ofile=None):
+    """
+Automate testing models with custom verification files and exporting
+the results to a file
+"""
+    if model is None or verification_file is None or ofile is None:
+        raise AssertionError()
+
+    mean_eer, std_eer, mean_dcf, std_dcf = test_ravdess(model=model,
+                                                        verification_file=verification_file)
+
+    with open(ofile, mode="a") as file:
+        file.write(
+            f"{model}\t{verification_file}\t{mean_eer}\t{std_eer}\t{mean_dcf}\t{std_dcf}\n")
+
+
+def export_latex(ifile=None, ofile=None):
+    if ifile is None:
+        raise AssertionError()
+    with open(ifile, mode="r") as file:
+        data = file.readlines()
+    exp_results = []
+    for line in data:
+        model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = line.replace(
+            "\n", "").split("\t")
+        exp_results.append(
+            (model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf))
+    if ofile is None:
+        ofile = ifile[:-3] + '.tex'
+    HEADER = """\\begin{tabular}{ |p{0.8cm}|p{6cm}||p{2cm}|p{2cm}| }
+ \hline
+ \multicolumn{4}{|c|}{Neutral enrollment and \\textit{weak or strong} emotionally injected verification utterance} \\\\
+ \hline
+ Exp & emotion & weak & strong \\\\
+ \hline
+"""
+    emotion_names = ["neutral", "calm", "happy", "sad",
+                     "angry", "fearful", "disgust", "surprised"]
+
+    with open(ofile, mode="w") as file:
+        file.write(HEADER)
+        for data, data_intense in zip(exp_results[::2], exp_results[1::2]):
+            # Weak emotion
+            model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = data
+            exp_details = verification_file[-9:][:-4]
+            exp_num, intensity, emotion = exp_details.split('.')
+            result1 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+            # Strong emotion
+            model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = data_intense
+            exp_details = verification_file[-9:][:-4]
+            exp_num, intensity, emotion = exp_details.split('.')
+            result2 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+            # write file
+            file.write(
+                f""" {exp_num}.{emotion} & {emotion_names[int(emotion)]}  & ${result1}$ & ${result2}$\\\\\n""")
+
+        file.write(""" \hline
+ \end{tabular} \\break\\break\\break
+""")
+
+
 if __name__ == "__main__":
 
     # Set everthing up before starting training & testing
     setup_environment_and_folders()
     # Core
-    # test_ravdess()
-    export_visual_representation_2D(
-        ofile="datasets/ravdess/representation_exp2.1.npy")
+    mean_eer, std_eer, mean_dcf, std_dcf = test_ravdess()
+
+    # export_visual_representation_2D(
+    #     ofile="datasets/ravdess/representation_exp2.1.npy")
 
     # visualize("datasets/ravdess/representation_exp1.1.npy",
     #           "datasets/ravdess/latent_space_exp1.1.png")
+    # model = "checkpoints/emot_frozenconv_voxceleb_lr=.5e-1.pt"
+    # ofile = f"results/exp3.{model.split('/')[-1][:-3]}.txt"
+    # for emotion in [1, 2, 3, 4, 5, 6, 7]:
+    #     for intensity in [1, 2]:
+    #         verification_file = f"datasets/ravdess/veri_files/veri_test_exp3.{intensity}.{emotion}.txt"
+    #         test_ravdess_and_export(model=model,
+    #                                 verification_file=verification_file,
+    #                                 ofile=ofile)
+
+    # export_latex(ifile=ofile)
+#
