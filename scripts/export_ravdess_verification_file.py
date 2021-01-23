@@ -274,11 +274,102 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
 # # Create path folder
 # os.makedirs('datasets/ravdess/veri_files/', exist_ok=True)
 # # Create a file as [labels, files1, files2]
-for emotion, pairs in enumerate(pairs_norm, 1):
+# for emotion, pairs in enumerate(pairs_norm, 1):
+#     shuffle(pairs)
+#     export_verification_file(pairs=pairs,
+#                              path=f"datasets/ravdess/veri_files/veri_test_exp3.1.{emotion}.txt")
+# for emotion, pairs in enumerate(pairs_strong, 1):
+#     shuffle(pairs)
+#     export_verification_file(pairs=pairs,
+#                              path=f"datasets/ravdess/veri_files/veri_test_exp3.2.{emotion}.txt")
+
+
+# EXPERIMENT 4
+#####################
+
+# Does emotion ignorance affect EER ?
+# In order to identify this we create two
+# different verification files.
+# File 1 (emotional_ignorance):
+# each pair should be a neutral (emotion-free)
+# enrollment while verification utterance
+# should be emotion
+# File 2 (emotional_knowledge):
+# each pair should be a emotional enrollment
+# as well as an emotional verification utterance
+# Files are meant to be:
+# a list of lists of tuples (label,utterance_1,utterance2)
+# which we will evaluate during test time for verification
+emotional_ignorance = [[] for i in range(EMOTIONS-1)]
+# Outer product to reduce time
+for sp, intensity, em, st, rep in itertools.product(range(SPEAKERS),
+                                                    # both intensities
+                                                    range(INTENSITIES),
+                                                    range(1, EMOTIONS),
+                                                    range(STATEMENTS),
+                                                    range(REPETITIONS)):
+    # Emotional Ignorance  emotion
+    enrollment = X[idx[sp, 0, st, 0, rep]]  # no emotion, no intens
+    verification = X[idx[sp, em, st, intensity, rep]]  # with emotion
+    # add pair with the same speaker, so label=1
+    emotional_ignorance[em-1].append((1, enrollment, verification))
+
+    # create a list without `sp` speaker id to pick from
+    left_speakers = list(range(0, sp)) + list(range(sp+1, SPEAKERS))
+    # add a different speaker (label=0)
+    diff_sp = int(np.random.choice(left_speakers, 1))
+    # Normal-emotionally enrollment utterance
+    # but this time from another speaker
+    enrollment = X[idx[sp, 0, st, intensity, rep]]  # no emotion,intens
+    verification = X[idx[diff_sp, em, st, 0, rep]]  # with emotion
+    # same speaker so label=0
+    emotional_ignorance[em-1].append((0, enrollment, verification))
+
+
+emotional_knowledge = [[] for i in range(EMOTIONS-1)]
+# Outer product to reduce time
+for (sp, intensity, em, st, rep,
+     intensity2, st2, rep2
+     ) in itertools.product(range(SPEAKERS),
+                            range(INTENSITIES),  # both intensities
+                            range(1, EMOTIONS),
+                            range(STATEMENTS),
+                            range(REPETITIONS),
+                            # second utterance iteration
+                            range(INTENSITIES),
+                            range(STATEMENTS),
+                            range(REPETITIONS)):
+    cond1 = intensity > intensity2
+    cond2 = st > st2
+    cond3 = rep > rep2
+    if not (cond1 and cond2 and cond3):
+        continue
+    # Emotional knowledge  emotion
+    enrollment = X[idx[sp, em, st2, intensity2, rep2]]  # with emotion
+    verification = X[idx[sp, em, st, intensity, rep]]  # with emotion
+    # add pair with the same speaker, so label=1
+    emotional_knowledge[em-1].append((1, enrollment, verification))
+
+    # create a list without `sp` speaker id to pick from
+    left_speakers = list(range(0, sp)) + list(range(sp+1, SPEAKERS))
+    # add a different speaker (label=0)
+    diff_sp = int(np.random.choice(left_speakers, 1))
+    # Normal-emotionally enrollment utterance
+    # but this time from another speaker
+    # enrollment = X[idx[sp, 0, st, intensity, rep]]  # with emotion
+    enrollment = X[idx[sp, 0, st2, intensity2, rep2]]  # with emotion
+    verification = X[idx[diff_sp, em, st, intensity, rep]]  # with emotion
+    # same speaker so label=0
+    emotional_knowledge[em-1].append((0, enrollment, verification))
+
+# Create path folder
+os.makedirs('datasets/ravdess/veri_files/', exist_ok=True)
+# Create a file as [labels, files1, files2]
+for emotion, pairs in enumerate(emotional_ignorance, 1):
     shuffle(pairs)
     export_verification_file(pairs=pairs,
-                             path=f"datasets/ravdess/veri_files/veri_test_exp3.1.{emotion}.txt")
-for emotion, pairs in enumerate(pairs_strong, 1):
+                             path=f"datasets/ravdess/veri_files/veri_test_exp4.1.{emotion}.txt")
+for emotion, pairs in enumerate(emotional_knowledge, 1):
     shuffle(pairs)
     export_verification_file(pairs=pairs,
-                             path=f"datasets/ravdess/veri_files/veri_test_exp3.2.{emotion}.txt")
+                             path=f"datasets/ravdess/veri_files/veri_test_exp4.2.{emotion}.txt")
