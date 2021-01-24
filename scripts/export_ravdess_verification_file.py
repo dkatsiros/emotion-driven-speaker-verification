@@ -339,10 +339,12 @@ for (sp, intensity, em, st, rep,
                             range(INTENSITIES),
                             range(STATEMENTS),
                             range(REPETITIONS)):
-    cond1 = intensity > intensity2
-    cond2 = st > st2
-    cond3 = rep > rep2
-    if not (cond1 and cond2 and cond3):
+    encoding_1 = intensity + 2*st + 4*rep
+    encoding_2 = intensity2 + 2*st2 + 4*rep2
+    # create 8x8 matrix with all possible combinations
+    # (encoding1 @ encoding2) and get all elements over
+    # the diagonal line (not dublicate + not same enroll+verif utt)
+    if not (encoding_1 > encoding_2):
         continue
     # Emotional knowledge  emotion
     enrollment = X[idx[sp, em, st2, intensity2, rep2]]  # with emotion
