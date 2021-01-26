@@ -294,12 +294,78 @@ def export_latex(ifile=None, ofile=None):
 """)
 
 
+def exp4_export_latex(model=None, ofile=None):
+    ifile_ignorance = f"results/exp4.1.{model[:-3]}.txt"
+    ifile_knowledge = f"results/exp4.2.{model[:-3]}.txt"
+    # ifile
+    if not os.path.exists(ifile_ignorance):
+        raise FileNotFoundError(ifile_ignorance)
+    if not os.path.exists(ifile_knowledge):
+        raise FileNotFoundError()
+
+    # store results
+    exp_results_ignorance = []
+    with open(ifile_ignorance, mode="r") as file:
+        data = file.readlines()
+    # read exported results - ignorance
+    for line in data:
+        _, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = line.replace(
+            "\n", "").split("\t")
+        exp_results_ignorance.append(
+            (model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf))
+
+    # store results
+    exp_results_knwoledge = []
+    with open(ifile_knowledge, mode="r") as file:
+        data = file.readlines()
+    # read exported results - knowledge
+    for line in data:
+        _, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = line.replace(
+            "\n", "").split("\t")
+        exp_results_knwoledge.append(
+            (model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf))
+
+    if ofile is None:
+        ofile = f"results/results_exp4.{model[:-3]}.tex"
+
+    HEADER = """\\begin{tabular}{ |p{0.8cm}|p{2cm}||p{2cm}|p{2cm}| }
+ \hline
+ \multicolumn{4}{|c|}{Emotion ignorance vs emotion knowledge for model } \\\\
+ \hline
+ Exp & emotion & ignorance & knowledge \\\\
+ \hline
+"""
+    emotion_names = ["neutral", "calm", "happy", "sad",
+                     "angry", "fearful", "disgust", "surprised"]
+
+    with open(ofile, mode="w") as file:
+        file.write(HEADER)
+        for idx, (ignorance, knowledge) in enumerate(zip(exp_results_ignorance, exp_results_knwoledge), 1):
+            # ignorance
+            model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = ignorance
+            # exp_details = verification_file[-9:][:-4]
+            # exp_num, intensity, emotion = exp_details.split('.')
+            result1 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+            # Strong emotion
+            model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = knowledge
+            # exp_details = verification_file[-9:][:-4]
+            # exp_num, intensity, emotion = exp_details.split('.')
+            result2 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+            # write file
+            file.write(
+                f""" 4.{idx} & {emotion_names[int(idx)]}  & ${result1}$ & ${result2}$\\\\\n""")
+
+        file.write(""" \hline
+ \end{tabular} \\break\\break\\break
+""")
+
+
 if __name__ == "__main__":
 
     # Set everthing up before starting training & testing
     setup_environment_and_folders()
     # Core
-    mean_eer, std_eer, mean_dcf, std_dcf = test_ravdess()
+    # mean_eer, std_eer, mean_dcf, std_dcf = test_ravdess()
 
     # export_visual_representation_2D(
     #     ofile="datasets/ravdess/representation_exp2.1.npy")
@@ -316,4 +382,5 @@ if __name__ == "__main__":
     #                                 ofile=ofile)
 
     # export_latex(ifile=ofile)
+    exp4_export_latex(model="fusion_model_lr=1e-3.pt")
 #
