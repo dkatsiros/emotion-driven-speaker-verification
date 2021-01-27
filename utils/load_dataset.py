@@ -245,7 +245,7 @@ def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_
 def load_VoxCeleb(val_ratio=0.05, validation=True):
     """
 Return train_speakers, validation_speakers and test_speakers.
-** `test_ratio` is fixed, unlike other datasets above. 
+** `test_ratio` is fixed, unlike other datasets above.
 """
     from random import shuffle
 

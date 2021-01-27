@@ -22,8 +22,8 @@ from lib.sound_processing import compute_max_sequence_length, compute_sequence_l
 from lib.training import train_and_validate, test, results, overfit_batch
 from lib.training import deterministic_model
 from models.SpeechEmbedder import CNNSpeechEmbedder
-from dataloading.voxceleb import Voxceleb1, Voxceleb1PreComputedMelSpectr, Voxceleb1_Evaluation_PreComputedMelSpectr
-from utils.load_dataset import load_VoxCeleb
+from dataloading.voxceleb import Voxceleb1, Voxceleb1PreComputedMelSpectr, Voxceleb1_Evaluation_PreComputedMelSpectr, Voxceleb1_mix_IEMOCAP_PreComputedMelSpectr
+from utils.load_dataset import load_VoxCeleb, load_IEMOCAP
 
 
 def setup_environment_and_folders():
@@ -177,6 +177,20 @@ def train_voxceleb():
     # Split dataset to arrays
     train_speakers, _, validation_speakers = load_VoxCeleb(val_ratio=.05,
                                                            validation=True)
+
+    train_emotional_speakers, labels_emotional_speakers = load_IEMOCAP(train_only=True,
+                                                                       SV_task=True,
+                                                                       n_classes=4)
+
+    # add each utterance to its speaker's list
+    # create : list[speaker_id] = [ut1,ut2,...]
+    emotional_speakers_utterances = [[]*10]
+    for x, y in zip(train_emotional_speakers, labels_emotional_speakers):
+        x_npy = x[:-4] + '.npy'
+        emotional_speakers_utterances[y].append(x_npy)
+    from random import shuffle
+    [shuffle(x) for x in emotional_speakers_utterances]
+
     # lengths = []
     # list(map(lambda sp: lengths.extend(glob.glob(sp + '/*/*.wav')),
     #          train_speakers+validation_speakers))
@@ -190,9 +204,10 @@ def train_voxceleb():
     print(f'Selected Batch Size(#speakers per batch): {config.SPEAKER_N}')
     fe_method = "MEL_SPECTROGRAM" if config.CNN_BOOLEAN is True else "MFCC"
 
-    dataset_func = Voxceleb1PreComputedMelSpectr if config.PRECOMPUTED_MELS is True else Voxceleb1
+    dataset_func = Voxceleb1_mix_IEMOCAP_PreComputedMelSpectr if config.PRECOMPUTED_MELS is True else Voxceleb1
     # Training dataloader
     train_dataset = dataset_func(X=train_speakers,
+                                 X_iemocap=emotional_speakers_utterances,
                                  training=True,
                                  fe_method=fe_method,
                                  max_seq_len=max_seq_len)
