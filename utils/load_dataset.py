@@ -69,7 +69,9 @@ def load_Emodb(test_val=[0.2, 0.2], validation=True, oversampling=True, train_on
     return X_train, y_train, X_test, y_test, X_val, y_val
 
 
-def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_classes=9, train_only=False):
+def load_IEMOCAP(test_val=[0.2, 0.2], validation=True,
+                 oversampling=True, n_classes=9,
+                 train_only=False, SV_task=False):
     """
     Return X_train, y_train, X_test, y_test of IEMOCAP dataset.
     Warning: Labels are already integers.
@@ -104,7 +106,9 @@ def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_clas
         # as the label of each wav
         for eval_file in evaluation_files:
             filenames_, labels_ = iemocap.read_evaluation_file(
-                eval_file=eval_file)
+                eval_file=eval_file,
+                # return speaker_id is SV_task is True
+                label_value=0 if SV_task is False else 1)
             # labels += labels_
             for f, l in zip(filenames_, labels_):
                 # Skip all labels > n_classes

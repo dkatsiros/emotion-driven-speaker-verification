@@ -1,11 +1,15 @@
 from lib import sound_processing
 
 
-def read_evaluation_file(eval_file=None):
+def read_evaluation_file(eval_file=None, label_value=0):
     """
     Reads an evaluation file and returns two lists.
     The first list contains all valid file names and
     the second one the labels of each one.
+
+    if label_value = 0 : list of emotions is returned (default),
+    if label_value = 1 : list of speaker_id's is returned,
+    if label_value = 2 : list of [emotion, speaker_id] is returned
     """
     if eval_file is None:
         raise FileNotFoundError()
@@ -23,15 +27,28 @@ def read_evaluation_file(eval_file=None):
                 data.append(data_raw[idx+1])
 
         # For each file get name and label
+        # time filename categorical_emotion VAD_emotion
+        # [5.7300 - 7.5300]	Ses03M_impro05a_F000	neu	[3.5000, 2.5000, 2.5000]
         for line in data:
             split = line.split("\t")
             label = split[2]
+            # get "03M" out of "Ses03M_impro05a_F000"
+            session_gender = split[1][3:6]
+            session = int(session_gender[:2])
+            gender = 0 if session_gender[-1] is "F" else 1
+            speaker_id = gender + 2 * session
+
             # If no label skip. Do not add anything
             if label == "xxx" or label == "oth":
                 continue
             filenames.append(split[1])
-            labels.append(emotion2idx(label))
-        return filenames, labels
+            if label_value == 0:
+                labels.append(emotion2idx(label))
+            elif label_value == 1:
+                labels.append(speaker_id)
+            else:
+                labels.append([emotion2idx(label), speaker_id])
+            return filenames, labels
 
 
 def emotion2idx(emotion=None):
