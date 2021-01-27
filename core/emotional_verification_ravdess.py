@@ -315,14 +315,14 @@ def exp4_export_latex(model=None, ofile=None):
             (model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf))
 
     # store results
-    exp_results_knwoledge = []
+    exp_results_knowledge = []
     with open(ifile_knowledge, mode="r") as file:
         data = file.readlines()
     # read exported results - knowledge
     for line in data:
         _, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = line.replace(
             "\n", "").split("\t")
-        exp_results_knwoledge.append(
+        exp_results_knowledge.append(
             (model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf))
 
     if ofile is None:
@@ -340,7 +340,7 @@ def exp4_export_latex(model=None, ofile=None):
 
     with open(ofile, mode="w") as file:
         file.write(HEADER)
-        for idx, (ignorance, knowledge) in enumerate(zip(exp_results_ignorance, exp_results_knwoledge), 1):
+        for idx, (ignorance, knowledge) in enumerate(zip(exp_results_ignorance, exp_results_knowledge), 1):
             # ignorance
             model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = ignorance
             # exp_details = verification_file[-9:][:-4]
@@ -354,7 +354,12 @@ def exp4_export_latex(model=None, ofile=None):
             # write file
             file.write(
                 f""" 4.{idx} & {emotion_names[int(idx)]}  & ${result1}$ & ${result2}$\\\\\n""")
-
+        # mean EER
+        avg_ignorance = np.mean([float(x[2]) for x in exp_results_ignorance])
+        avg_knowledge = np.mean([float(x[2]) for x in exp_results_knowledge])
+        file.write("\hline")
+        file.write(
+            f""" 4.{len(exp_results_ignorance)+1} & average  & ${avg_ignorance:.2f}$ & ${avg_knowledge:.2f}$\\\\\n""")
         file.write(""" \hline
  \end{tabular} \\break\\break\\break
 """)
@@ -382,5 +387,5 @@ if __name__ == "__main__":
     #                                 ofile=ofile)
 
     # export_latex(ifile=ofile)
-    exp4_export_latex(model="fusion_model_lr=1e-3.pt")
+    exp4_export_latex(model="emot_frozen1stconv_voxceleb_lr=1e-2.pt")
 #
