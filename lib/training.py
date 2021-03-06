@@ -81,7 +81,7 @@ def train(_epoch, dataloader, model, loss_function, optimizer, writer, cnn=False
 
     accuracy = correct/len(dataloader.dataset) * 100
     writer.add_scalar("Accuracy/train", accuracy, _epoch)
-    return training_loss / len(dataloader.dataset)
+    return training_loss / (len(dataloader.dataset)/dataloader.batch_size)
 
 
 def validate(_epoch, dataloader, model, loss_function, writer, cnn=False, *args, **kwargs):
@@ -130,12 +130,12 @@ def validate(_epoch, dataloader, model, loss_function, writer, cnn=False, *args,
 
         # Print some stats
         print(
-            f'\nValidation loss at epoch {_epoch} : {round(valid_loss/len(dataloader.dataset), 4)}')
+            f'\nValidation loss at epoch {_epoch} : {round( valid_loss/(len(dataloader.dataset)/dataloader.batch_size), 4)}')
 
         accuracy = correct / len(dataloader.dataset) * 100
         writer.add_scalar("Accuracy/validation", accuracy, _epoch)
 
-    return valid_loss / len(dataloader.dataset)
+    return valid_loss / (len(dataloader.dataset)/dataloader.batch_size)
 
 
 def train_and_validate(model,
