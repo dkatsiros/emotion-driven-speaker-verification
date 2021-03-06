@@ -67,7 +67,7 @@ def train_se(e, dataloader, model, loss_function, optimizer, *args, **kwargs):
         torch.nn.utils.clip_grad_norm_(model.parameters(), 3.0)
         torch.nn.utils.clip_grad_norm_(loss_function.parameters(), 1.0)
         optimizer.step()
-    return training_loss / len(dataloader.dataset)
+    return training_loss / (len(dataloader.dataset)/dataloader.batch_size)
 
 
 def validate_se(e, dataloader, model, loss_function, *args, **kwargs):
@@ -101,7 +101,7 @@ def validate_se(e, dataloader, model, loss_function, *args, **kwargs):
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 3.0)
         torch.nn.utils.clip_grad_norm_(loss_function.parameters(), 1.0)
-    return validation_loss / len(dataloader.dataset)
+    return validation_loss / (len(dataloader.dataset)/dataloader.batch_size)
 
 
 def test_se(model, dataloader, testing_epochs=10):
