@@ -361,7 +361,7 @@ for (sp, intensity, em, st, rep,
     # enrollment = X[idx[sp, 0, st, intensity, rep]]  # with emotion
     enrollment = X[idx[sp, 0, st2, intensity2, rep2]]  # with emotion
     verification = X[idx[diff_sp, em, st, intensity, rep]]  # with emotion
-    # same speaker so label=0
+    # different speaker so label=0
     emotional_knowledge[em-1].append((0, enrollment, verification))
 
 # Create path folder
