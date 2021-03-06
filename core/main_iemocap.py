@@ -26,12 +26,12 @@ DATASET = "IEMOCAP"
 deterministic_model(config.DETERMINISTIC)
 
 
-N_CLASSES = 4
+N_CLASSES = 4  # 4 #6 #9
 
 # Split dataset to arrays
 [X_train, y_train,
  X_test, y_test,
- X_eval, y_eval] = load_IEMOCAP(n_classes=N_CLASSES)
+ X_eval, y_eval] = load_IEMOCAP(n_classes=N_CLASSES, test_val=[0.1, 0.05])
 
 # PyTorch
 BATCH_SIZE = config.BATCH_SIZE  # len(X_train) // 20
@@ -96,13 +96,15 @@ print(model)
 #############################################################################
 # Training Pipeline
 #############################################################################
+# Loss weights
+# weights = torch.tensor([1.25,1,1,1]).type('torch.FloatTensor').to(device)#,1,1,1,1,1] # sad =2
 # Loss and optimizer
-loss_function = torch.nn.CrossEntropyLoss()
+loss_function = torch.nn.CrossEntropyLoss()  # weight=weights)
 optimizer = torch.optim.AdamW(model.parameters(), weight_decay=0.02)
 
-overfit_batch(model, train_loader, loss_function,
-              optimizer, 100, cnn=config.CNN_BOOLEAN)
-exit()
+# overfit_batch(model, train_loader, loss_function,
+#               optimizer, 100, cnn=config.CNN_BOOLEAN)
+# exit()
 logging.basicConfig(filename=config.LOG_FILE, level=logging.INFO)
 best_model, _epochs = train_and_validate(model=model,
                                          train_loader=train_loader,
@@ -126,4 +128,4 @@ y_pred, y_true = test(best_model, test_loader, cnn=CNN_BOOLEAN)
 # ===== RESULTS =====
 results(model=best_model, optimizer=optimizer, loss_function=loss_function,
         y_pred=y_pred, y_true=y_true, epochs=_epochs,
-        timestamp=timestamp, dataset=DATASET)
+        timestamp=timestamp, dataset=DATASET, n_classes=N_CLASSES)
