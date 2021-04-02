@@ -135,7 +135,7 @@ class Voxceleb1_Evaluation_PreComputedMelSpectr(Dataset):
         assert(all([os.path.exists(file) for file in self.files1+self.files2]))
         # typecasting str to integers
         self.labels = np.array(list(map(int, labels)), dtype=np.int8)
-        assert all([l in [0, 1] for l in labels])
+        assert all([l in [0, 1] for l in self.labels])
 
     def __len__(self):
         return self.n_evaluations

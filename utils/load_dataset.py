@@ -162,7 +162,7 @@ def load_IEMOCAP(test_val=[0.2, 0.2], validation=True, oversampling=True, n_clas
     return X_train, y_train, X_test, y_test, X_val, y_val
 
 
-def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_only=False):
+def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_only=False, labels_only=True):
     """
     Return X_train, y_train, X_test, y_test of RAVDESS dataset.
     """
@@ -191,7 +191,7 @@ def load_RAVDESS(test_val=[0.2, 0.2], validation=True, oversampling=True, train_
         filenames.extend(glob.glob(os.path.join(actor, '*.wav')))
 
     for file in filenames:
-        label = ravdess.read_file_identifiers(file, labels_only=True)
+        label = ravdess.read_file_identifiers(file, labels_only=labels_only)
         labels.append(label)
 
     if train_only is True:

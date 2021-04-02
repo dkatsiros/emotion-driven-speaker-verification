@@ -15,7 +15,7 @@ from tqdm import tqdm
 # Relative imports
 import config
 from config import VARIABLES_FOLDER, RECOMPUTE, DETERMINISTIC
-from lib.metrics import tuneThresholdfromScore
+from lib.metrics import tuneThresholdfromScore, ComputeErrorRates, ComputeMinDcf
 from lib.loss import GE2ELoss
 from lib.model_editing import drop_layers, print_require_grad_parameter
 from lib.sound_processing import compute_max_sequence_length, compute_sequence_length_distribution
@@ -67,7 +67,7 @@ def train_se(e, dataloader, model, loss_function, optimizer, *args, **kwargs):
         torch.nn.utils.clip_grad_norm_(model.parameters(), 3.0)
         torch.nn.utils.clip_grad_norm_(loss_function.parameters(), 1.0)
         optimizer.step()
-    return training_loss / len(dataloader.dataset)
+    return training_loss / (len(dataloader.dataset)/dataloader.batch_size)
 
 
 def validate_se(e, dataloader, model, loss_function, *args, **kwargs):
@@ -101,7 +101,7 @@ def validate_se(e, dataloader, model, loss_function, *args, **kwargs):
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 3.0)
         torch.nn.utils.clip_grad_norm_(loss_function.parameters(), 1.0)
-    return validation_loss / len(dataloader.dataset)
+    return validation_loss / (len(dataloader.dataset)/dataloader.batch_size)
 
 
 def test_se(model, dataloader, testing_epochs=10):
@@ -110,10 +110,12 @@ def test_se(model, dataloader, testing_epochs=10):
     device = next(model.parameters()).device
 
     avg_EER = []
-    avg_EER_ = []
+    avg_mindcf = []
+    all_cossim = []
+    all_labels = []
     for e in range(testing_epochs):
-        batch_avg_EER = 0
-        batch_avg_EER_ = 0
+        epoch_avg_EER = 0
+        batch_mindcf = 0
         # dataloader: (batch_size,2,max_seq_len,input_fe)
         for batch_id, (batch, labels) in enumerate(tqdm(dataloader)):
             # move to device
@@ -131,8 +133,8 @@ def test_se(model, dataloader, testing_epochs=10):
             enrollment, verification = torch.split(embeddings,
                                                    1,  # split_size
                                                    dim=1)  # final 2* (batch_size,1,out_dim)
-            enrollment = torch.squeeze()  # reduce dim=1
-            verification = torch.squeeze()  # reduce dim=1
+            enrollment = torch.squeeze(enrollment)  # reduce dim=1
+            verification = torch.squeeze(verification)  # reduce dim=1
             # compute the cosine similarity (batch_size,1)
             cossim = torch.nn.functional.cosine_similarity(enrollment,
                                                            verification)
@@ -140,28 +142,44 @@ def test_se(model, dataloader, testing_epochs=10):
             # batch and labels back to cpu
             batch.cpu()
             labels.cpu()
-
-            # Fast EER computation
-            tunedThreshold, batch_EER, batch_EER_mean, fpr, fnr = tuneThresholdfromScore(cossim.cpu().detach(),
-                                                                                         labels.cpu(),
-                                                                                         [1, 0.1])
+            
+            # total computation
+            all_cossim.extend(cossim.cpu().detach())
+            all_labels.extend(labels.cpu())
+            # tunedThreshold, batch_EER, fpr, fnr = tuneThresholdfromScore(cossim.cpu().detach(),
+            #                                                              labels.cpu(),
+            #                                                              [1, 0.1])
+            # fnrs, fprs, thresholds = ComputeErrorRates(cossim.cpu().detach(),
+            #                                            labels.cpu())
             # eer=(far + frr)/2
-            batch_avg_EER_ = (batch_id * batch_avg_EER_ +
-                              batch_EER_mean)/(batch_id+1)
-            # eer=max(far+frr)
-            batch_avg_EER = (batch_id * batch_avg_EER + batch_EER)/(batch_id+1)
+            # epoch_avg_EER = (batch_id * epoch_avg_EER +
+            #                  batch_EER)/(batch_id+1)
 
-            logging.info(f"\nEER (epoch:{ e+1 }): {batch_avg_EER:.2f}")
-            logging.info(f"\navg_EER (epoch:{ e+1 }): {batch_avg_EER_:.2f}")
+            # p_target = 0.01
+            # c_miss = 1
+            # c_fa = 1
+
+            # mindcf, _ = ComputeMinDcf(fnrs, fprs, thresholds,
+            #                           p_target, c_miss, c_fa)
+            # batch_mindcf = (batch_id * batch_mindcf + mindcf)/(batch_id+1)
+
+            # logging.info(f"\navg_EER (epoch:{ e+1 }): {epoch_avg_EER:.2f}")
+            # logging.info(f"\nmin DCF (epoch: {e+1}): {mindcf:.2f}")
 
         # Get mean of #testing_epochs EER
-        avg_EER.append(batch_avg_EER)
-        avg_EER_.append(batch_avg_EER_)
+        # avg_EER.append(epoch_avg_EER)
+        # avg_mindcf.append(batch_mindcf)
+        tunedThreshold, EER, fpr, fnr = tuneThresholdfromScore(all_cossim,
+                                                                all_labels,
+                                                                [1, 0.1])
 
-    print("\n EER across {0} epochs: {1:.4f} +- {2:.4f}".format(
-        testing_epochs, np.mean(avg_EER), np.std(avg_EER)))
-    print("\n avg_EER across {0} epochs: {1:.4f} +- {2:.4f}".format(
-        testing_epochs, np.mean(avg_EER_), np.std(avg_EER_)))
+        avg_EER.append(EER)
+        print(f"\navg_EER (epoch:{ e+1 }): {EER:.2f}")
+        logging.info(f"\navg_EER (epoch:{ e+1 }): {epoch_avg_EER:.2f}")
+    # print("\n avg_EER across {0} epochs: {1:.4f} +- {2:.4f}".format(
+    #     testing_epochs, np.mean(avg_EER), np.std(avg_EER)))
+    # print("\n min_dcf across {0} epochs: {1:.4f} +- {2:.4f}".format(
+    #     testing_epochs, np.mean(avg_mindcf), np.std(avg_mindcf)))
 
 
 def train_voxceleb():
@@ -263,7 +281,7 @@ def test_voxceleb(max_seq_len=245):
     test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,
                              shuffle=True, num_workers=config.NUM_WORKERS, drop_last=False)
 
-    batch_, label_ = next(iter(test_loader)).size()
+    batch_, label_ = next(iter(test_loader))
     (N, M, width, height), label_size = batch_.size(), label_.size()
     # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -286,7 +304,7 @@ def test_voxceleb(max_seq_len=245):
     # Evaluation mode -gradients update off
     model.eval()
     # ===== TEST =====
-    test_se(model, test_loader, testing_epochs=50)
+    test_se(model, test_loader, testing_epochs=1)
 
 
 if __name__ == "__main__":

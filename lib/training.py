@@ -42,6 +42,7 @@ def train(_epoch, dataloader, model, loss_function, optimizer, writer, cnn=False
 
         inputs = inputs.to(device)
         labels = labels.type('torch.LongTensor').to(device)
+        # labels = labels.type('torch.FloatTensor').to(device)
 
         # Clear gradients
         optimizer.zero_grad()
@@ -81,7 +82,7 @@ def train(_epoch, dataloader, model, loss_function, optimizer, writer, cnn=False
 
     accuracy = correct/len(dataloader.dataset) * 100
     writer.add_scalar("Accuracy/train", accuracy, _epoch)
-    return training_loss / len(dataloader.dataset)
+    return training_loss / (len(dataloader.dataset)/dataloader.batch_size)
 
 
 def validate(_epoch, dataloader, model, loss_function, writer, cnn=False, *args, **kwargs):
@@ -130,12 +131,12 @@ def validate(_epoch, dataloader, model, loss_function, writer, cnn=False, *args,
 
         # Print some stats
         print(
-            f'\nValidation loss at epoch {_epoch} : {round(valid_loss/len(dataloader.dataset), 4)}')
+            f'\nValidation loss at epoch {_epoch} : {round( valid_loss/(len(dataloader.dataset)/dataloader.batch_size), 4)}')
 
         accuracy = correct / len(dataloader.dataset) * 100
         writer.add_scalar("Accuracy/validation", accuracy, _epoch)
 
-    return valid_loss / len(dataloader.dataset)
+    return valid_loss / (len(dataloader.dataset)/dataloader.batch_size)
 
 
 def train_and_validate(model,
@@ -273,7 +274,8 @@ def test(model, dataloader, cnn=False):
 def results(model, optimizer, loss_function,
             y_pred, y_true,
             epochs, timestamp,
-            dataset):
+            dataset,
+            n_classes=4):
     """Prints model details"""
 
     # Print metrics
@@ -285,7 +287,7 @@ def results(model, optimizer, loss_function,
     # Confusion matrix
     conf_matrix = confusion_matrix(y_true=y_true, y_pred=y_pred)
     if dataset == "IEMOCAP":
-        classes = iemocap.get_classes(n_classes=4)
+        classes = iemocap.get_classes(n_classes=n_classes)
     elif dataset == "EMODB":
         classes = emodb.get_classes()
     else:
