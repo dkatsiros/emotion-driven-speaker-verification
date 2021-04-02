@@ -111,6 +111,8 @@ def test_se(model, dataloader, testing_epochs=10):
 
     avg_EER = []
     avg_mindcf = []
+    all_cossim = []
+    all_labels = []
     for e in range(testing_epochs):
         epoch_avg_EER = 0
         batch_mindcf = 0
@@ -140,35 +142,44 @@ def test_se(model, dataloader, testing_epochs=10):
             # batch and labels back to cpu
             batch.cpu()
             labels.cpu()
-
-            tunedThreshold, batch_EER, fpr, fnr = tuneThresholdfromScore(cossim.cpu().detach(),
-                                                                         labels.cpu(),
-                                                                         [1, 0.1])
-            fnrs, fprs, thresholds = ComputeErrorRates(cossim.cpu().detach(),
-                                                       labels.cpu())
+            
+            # total computation
+            all_cossim.extend(cossim.cpu().detach())
+            all_labels.extend(labels.cpu())
+            # tunedThreshold, batch_EER, fpr, fnr = tuneThresholdfromScore(cossim.cpu().detach(),
+            #                                                              labels.cpu(),
+            #                                                              [1, 0.1])
+            # fnrs, fprs, thresholds = ComputeErrorRates(cossim.cpu().detach(),
+            #                                            labels.cpu())
             # eer=(far + frr)/2
-            epoch_avg_EER = (batch_id * epoch_avg_EER +
-                             batch_EER)/(batch_id+1)
+            # epoch_avg_EER = (batch_id * epoch_avg_EER +
+            #                  batch_EER)/(batch_id+1)
 
-            p_target = 0.01
-            c_miss = 1
-            c_fa = 1
+            # p_target = 0.01
+            # c_miss = 1
+            # c_fa = 1
 
-            mindcf, _ = ComputeMinDcf(fnrs, fprs, thresholds,
-                                      p_target, c_miss, c_fa)
-            batch_mindcf = (batch_id * batch_mindcf + mindcf)/(batch_id+1)
+            # mindcf, _ = ComputeMinDcf(fnrs, fprs, thresholds,
+            #                           p_target, c_miss, c_fa)
+            # batch_mindcf = (batch_id * batch_mindcf + mindcf)/(batch_id+1)
 
-            logging.info(f"\navg_EER (epoch:{ e+1 }): {epoch_avg_EER:.2f}")
-            logging.info(f"\nmin DCF (epoch: {e+1}): {mindcf:.2f}")
+            # logging.info(f"\navg_EER (epoch:{ e+1 }): {epoch_avg_EER:.2f}")
+            # logging.info(f"\nmin DCF (epoch: {e+1}): {mindcf:.2f}")
 
         # Get mean of #testing_epochs EER
-        avg_EER.append(epoch_avg_EER)
-        avg_mindcf.append(batch_mindcf)
+        # avg_EER.append(epoch_avg_EER)
+        # avg_mindcf.append(batch_mindcf)
+        tunedThreshold, EER, fpr, fnr = tuneThresholdfromScore(all_cossim,
+                                                                all_labels,
+                                                                [1, 0.1])
 
-    print("\n avg_EER across {0} epochs: {1:.4f} +- {2:.4f}".format(
-        testing_epochs, np.mean(avg_EER), np.std(avg_EER)))
-    print("\n min_dcf across {0} epochs: {1:.4f} +- {2:.4f}".format(
-        testing_epochs, np.mean(avg_mindcf), np.std(avg_mindcf)))
+        avg_EER.append(EER)
+        print(f"\navg_EER (epoch:{ e+1 }): {EER:.2f}")
+        logging.info(f"\navg_EER (epoch:{ e+1 }): {epoch_avg_EER:.2f}")
+    # print("\n avg_EER across {0} epochs: {1:.4f} +- {2:.4f}".format(
+    #     testing_epochs, np.mean(avg_EER), np.std(avg_EER)))
+    # print("\n min_dcf across {0} epochs: {1:.4f} +- {2:.4f}".format(
+    #     testing_epochs, np.mean(avg_mindcf), np.std(avg_mindcf)))
 
 
 def train_voxceleb():
@@ -293,7 +304,7 @@ def test_voxceleb(max_seq_len=245):
     # Evaluation mode -gradients update off
     model.eval()
     # ===== TEST =====
-    test_se(model, test_loader, testing_epochs=50)
+    test_se(model, test_loader, testing_epochs=1)
 
 
 if __name__ == "__main__":
