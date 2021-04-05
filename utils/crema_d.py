@@ -2,8 +2,24 @@ import os
 import numpy as np
 import csv
 import copy
+import itertools
 
 EXPORTED_FOLDER = "emotional_speaker_verification_exported"
+
+
+def export_verification_file(pairs=None,
+                             filepath='datasets/crema-d/emotional_speaker_verification_exported/veri.txt',
+                             override=False):
+
+    if os.path.exists(filepath) is True and override is False:
+        print(f"File {filepath} already exists. Aborting export..")
+        return
+
+    with open(file=filepath, mode="w") as file:
+        for pair in pairs:
+            label, u1, u2 = pair
+            file.write(f"{label} {u1} {u2}\n")
+    print(f'Export finished for {filepath} with {len(pairs)} pairs.')
 
 
 def export_csv(tuples, filepath=None, override=False):
@@ -122,7 +138,7 @@ def split_SER_SV(pairs=[],
                  SV_file='SV_files.csv',
                  override=False):
     """Load files with labels and slit to male-female to avoid
-    trivial solutions"""
+    trivial solutions. Export splitted files and verification file."""
 
     import random
 
@@ -149,14 +165,69 @@ def split_SER_SV(pairs=[],
     ##
     # Speech Emotion Recognition
     # try to export csv, if not already there
-    filepath = os.path.join(dataset_path, EXPORTED_FOLDER, SER_file)
-    export_csv(tuples=SER_samples, filepath=filepath, override=override)
+    filepath_SER = os.path.join(dataset_path, EXPORTED_FOLDER, SER_file)
+    export_csv(tuples=SER_samples, filepath=filepath_SER, override=override)
 
     ##
     # Speaker Verification
     # try to export csv, if not already there
-    filepath = os.path.join(dataset_path, EXPORTED_FOLDER, SV_file)
-    export_csv(tuples=SV_samples, filepath=filepath, override=override)
+    filepath_SV = os.path.join(dataset_path, EXPORTED_FOLDER, SV_file)
+    export_csv(tuples=SV_samples, filepath=filepath_SV, override=override)
+
+    ##
+    # Train test split for SV
+    train_SV_people = SV_people[:32]
+    train_SV = [t for t in pairs if t[1] in train_SV_people]
+
+    valid_SV_people = SV_people[32:38]
+    valid_SV = [t for t in pairs if t[1] in valid_SV_people]
+
+    test_SV_people = SV_people[38:]
+    test_SV = [t for t in pairs if t[1] in test_SV_people]
+
+    filepath_SV_train = os.path.join(
+        dataset_path, EXPORTED_FOLDER, SV_file[:-4]+'_train'+SV_file[-4:])
+    export_csv(tuples=train_SV, filepath=filepath_SV_train, override=override)
+
+    filepath_SV_valid = os.path.join(
+        dataset_path, EXPORTED_FOLDER, SV_file[:-4]+'_valid'+SV_file[-4:])
+    export_csv(tuples=valid_SV, filepath=filepath_SV_valid, override=override)
+
+    filepath_SV_test = os.path.join(
+        dataset_path, EXPORTED_FOLDER, SV_file[:-4]+'_test'+SV_file[-4:])
+    export_csv(tuples=test_SV, filepath=filepath_SV_test, override=override)
+
+    ##
+    # create test pairs
+    veri_couples = []
+    positive_couples = []
+    negative_couples = []
+    for idx1, idx2 in itertools.product(range(len(test_SV)),
+                                        range(len(test_SV))):
+        if idx1 <= idx2:
+            continue
+
+        sample_1 = test_SV[idx1][0]
+        sample_2 = test_SV[idx2][0]
+        # same_speaker = 1 if test_SV[idx1][1] == test_SV[idx2][1] else 0
+        # veri_couples.append([same_speaker, sample_1, sample_2])
+        # random.shuffle(veri_couples)
+        if test_SV[idx1][1] == test_SV[idx2][1]:
+            positive_couples.append([1, sample_1, sample_2])
+        else:
+            negative_couples.append([0, sample_1, sample_2])
+
+    # Balance Potives/Negative Test
+    number_of_positives = len(positive_couples)
+    random.shuffle(positive_couples)
+    random.shuffle(negative_couples)
+    negative_couples = negative_couples[:number_of_positives]
+    for positive, negative in zip(positive_couples, negative_couples):
+        veri_couples.append(positive)
+        veri_couples.append(negative)
+    #
+    # shuffle and export to file
+    export_verification_file(pairs=veri_couples, override=override)
 
 
 if __name__ == "__main__":
