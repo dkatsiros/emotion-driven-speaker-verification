@@ -7,6 +7,10 @@ import itertools
 EXPORTED_FOLDER = "emotional_speaker_verification_exported"
 
 
+##########################
+# Experiment Setup Scripts
+##########################
+
 def export_verification_file(pairs=None,
                              filepath='datasets/crema-d/emotional_speaker_verification_exported/veri.txt',
                              override=False):
@@ -40,6 +44,7 @@ def export_csv(tuples, filepath=None, override=False):
         # Actual exporting
         for row in tuples:
             writer.writerow([c for c in row])
+    print(f'Export finished for {filepath}.')
 
 
 def import_csv(filepath=None):
@@ -53,7 +58,12 @@ def import_csv(filepath=None):
         for idx, row in enumerate(csv_reader):
             if idx == 0:
                 continue
-            tuples.append(row)
+            tuples.append([row[0],
+                           int(row[1]),
+                           int(row[2]),
+                           int(row[3]),
+                           float(row[4]),
+                           int(row[5])])
     return tuples
 
 
@@ -130,6 +140,57 @@ def read_label_file(dataset_path=None, filename="summaryTable.csv", source=0):
                                  ))
 
     return files_labels
+
+
+def load_SER_export_train_val_test(dataset_path="datasets/crema-d",
+                                   SER_file='SER_files.csv',
+                                   train_val_test_ratio=[0.85, 0.1, 0.15],
+                                   override=False):
+    filepath_SER = os.path.join(dataset_path, EXPORTED_FOLDER, SER_file)
+
+    if not os.path.exists(filepath_SER):
+        raise FileNotFoundError
+
+    # decleare emotions
+    emotions = ["N", "A", "H", "S", "D", "F"]
+    # load pairs
+    SER_pairs = import_csv(filepath=filepath_SER)
+    emotion_dict = {i: 0 for i in range(6)}
+    for pair in SER_pairs:
+        emotion_dict[pair[3]] += 1
+
+    total = sum(emotion_dict.values())
+    print(f"Total utterances: {total}")
+    print('Percentages per emotion:\n-------------------------------------')
+    print(*[em + '     ' for em in emotions])
+    print(*[str(v/total*100)[:5] + '%' for v in emotion_dict.values()])
+
+    # Get ratio from input
+    train_ratio, val_ratio, test_ratio = train_val_test_ratio
+    # Split samples according to ratio
+    print(int(np.ceil(train_ratio * len(SER_pairs))))
+    train_val = SER_pairs[0:int(np.ceil(train_ratio * len(SER_pairs)))]
+    test = SER_pairs[int(np.ceil(train_ratio * len(SER_pairs))):]
+
+    train = train_val[int(np.ceil(val_ratio * len(train_val))):]
+    val = train_val[0:int(np.ceil(val_ratio * len(train_val)))]
+    print(
+        f"Train samples: {len(train)}, Test samples: {len(test)}, Validation samples: {len(val)} ")
+
+    # train
+    filepath_SER_train = os.path.join(
+        dataset_path, EXPORTED_FOLDER, SER_file[:-4] + 'train' + SER_file[-4:])
+    export_csv(tuples=train, filepath=filepath_SER_train, override=override)
+
+    # test
+    filepath_SER_test = os.path.join(
+        dataset_path, EXPORTED_FOLDER, SER_file[:-4] + 'test' + SER_file[-4:])
+    export_csv(tuples=test, filepath=filepath_SER_test, override=override)
+
+    # validation
+    filepath_SER_val = os.path.join(
+        dataset_path, EXPORTED_FOLDER, SER_file[:-4] + 'val' + SER_file[-4:])
+    export_csv(tuples=val, filepath=filepath_SER_val, override=override)
 
 
 def split_SER_SV(pairs=[],
@@ -229,8 +290,18 @@ def split_SER_SV(pairs=[],
     # shuffle and export to file
     export_verification_file(pairs=veri_couples, override=override)
 
+    load_SER_export_train_val_test(dataset_path=dataset_path,
+                                   SER_file=SER_file,
+                                   train_val_test_ratio=[0.85, 0.1, 0.15],
+                                   override=override)
+
+
+############################
+# Loading and handling utils
+############################
 
 if __name__ == "__main__":
+    # Parse and export files & pairs & train val test
     file_pairs = read_label_file(dataset_path="datasets/crema-d")
     split_SER_SV(pairs=file_pairs,
                  dataset_path="datasets/crema-d",
