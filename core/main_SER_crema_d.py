@@ -31,7 +31,7 @@ N_CLASSES = 4  # 4 #6 #9
 # Split dataset to arrays
 [X_train, y_train,
  X_test, y_test,
- X_val, y_val] = load_CREMAD_SER(n_emotions=4)
+ X_val, y_val] = load_CREMAD_SER(n_emotions=N_CLASSES)
 
 # PyTorch
 BATCH_SIZE = config.BATCH_SIZE  # len(X_train) // 20
