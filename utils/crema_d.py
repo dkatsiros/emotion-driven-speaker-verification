@@ -336,15 +336,18 @@ def load_CREMAD_SER(n_emotions=4,
     # and keep only n_emotions
     # train
     train_pairs = import_csv(filepath=train_filepath)
-    X_train, y_train = zip(*[(x[0], x[3])
+    X_train, y_train = zip(*[(os.path.join(dataset_path, "AudioWAV", x[0]),
+                              x[3])
                              for x in train_pairs if x[3] < n_emotions])
     # test
     test_pairs = import_csv(filepath=test_filepath)
-    X_test, y_test = zip(*[(x[0], x[3])
+    X_test, y_test = zip(*[(os.path.join(dataset_path, "AudioWAV", x[0]),
+                            x[3])
                            for x in test_pairs if x[3] < n_emotions])
     # validation
     val_pairs = import_csv(filepath=val_filepath)
-    X_val, y_val = zip(*[(x[0], x[3])
+    X_val, y_val = zip(*[(os.path.join(dataset_path, "AudioWAV", x[0]),
+                          x[3])
                          for x in val_pairs if x[3] < n_emotions])
 
     # format in file-label
