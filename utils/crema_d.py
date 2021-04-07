@@ -361,6 +361,25 @@ def load_CREMAD_SER(n_emotions=4,
     return X_train, y_train, X_test, y_test, X_val, y_val
 
 
+def load_CREAMAD_SV(SV_file="SV_files.csv",
+                    dataset_path="datasets/crema-d"):
+    """
+Return train_speakers and validation_speakers. 
+"""
+
+    # load files
+    train_data = import_csv(filepath=os.path.join(
+        dataset_path, EXPORTED_FOLDER, SV_file[:-4]+'_train'+SV_file[-4:]))
+
+    valid_data = import_csv(filepath=os.path.join(
+        dataset_path, EXPORTED_FOLDER, SV_file[:-4]+'_valid'+SV_file[-4:]))
+
+    # keep only unique speaker ids
+    train_speakers = list(set([x[1] for x in train_data]))
+    valid_speakers = list(set([x[1] for x in valid_data]))
+    return train_speakers, valid_speakers
+
+
 if __name__ == "__main__":
     # Parse and export files & pairs & train val test
     file_pairs = read_label_file(dataset_path="datasets/crema-d")
@@ -369,6 +388,7 @@ if __name__ == "__main__":
                  dataset_path="datasets/crema-d",
                  SER_file='SER_files.csv',
                  SV_file='SV_files.csv',
-                 override=True)
+                 override=False)
     # return train test val split with labels
     load_CREMAD_SER(n_emotions=4)
+    load_CREAMAD_SV()
