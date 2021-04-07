@@ -332,23 +332,30 @@ def load_CREMAD_SER(n_emotions=4,
     assert(os.path.exists(test_filepath))
     assert(os.path.exists(val_filepath))
 
+    # Create path function
+    def create_path(x): return os.path.join(
+        dataset_path, "AudioWAV", x + ".wav")
+
     # load pairs from files
     # and keep only n_emotions
     # train
     train_pairs = import_csv(filepath=train_filepath)
-    X_train, y_train = zip(*[(os.path.join(dataset_path, "AudioWAV", x[0] + ".wav"),
+    X_train, y_train = zip(*[(create_path(x[0]),
                               x[3])
-                             for x in train_pairs if x[3] < n_emotions])
+                             for x in train_pairs if x[3] < n_emotions and
+                             os.path.exists(create_path(x[0]))])
     # test
     test_pairs = import_csv(filepath=test_filepath)
-    X_test, y_test = zip(*[(os.path.join(dataset_path, "AudioWAV", x[0] + ".wav"),
+    X_test, y_test = zip(*[(create_path(x[0]),
                             x[3])
-                           for x in test_pairs if x[3] < n_emotions])
+                           for x in test_pairs if x[3] < n_emotions and
+                           os.path.exists(create_path(x[0]))])
     # validation
     val_pairs = import_csv(filepath=val_filepath)
-    X_val, y_val = zip(*[(os.path.join(dataset_path, "AudioWAV", x[0] + ".wav"),
+    X_val, y_val = zip(*[(create_path(x[0]),
                           x[3])
-                         for x in val_pairs if x[3] < n_emotions])
+                         for x in val_pairs if x[3] < n_emotions and
+                         os.path.exists(create_path(x[0]))])
 
     # format in file-label
     return X_train, y_train, X_test, y_test, X_val, y_val
