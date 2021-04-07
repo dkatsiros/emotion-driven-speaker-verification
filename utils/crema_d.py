@@ -142,7 +142,8 @@ def read_label_file(dataset_path=None, filename="summaryTable.csv", source=0):
     return files_labels
 
 
-def load_SER_export_train_val_test(dataset_path="datasets/crema-d",
+def load_SER_export_train_val_test(n_emotions=4,
+                                   dataset_path="datasets/crema-d",
                                    SER_file='SER_files.csv',
                                    train_val_test_ratio=[0.85, 0.1, 0.15],
                                    override=False):
@@ -152,10 +153,12 @@ def load_SER_export_train_val_test(dataset_path="datasets/crema-d",
         raise FileNotFoundError
 
     # decleare emotions
-    emotions = ["N", "A", "H", "S", "D", "F"]
+    emotions = ["N", "A", "H", "S", "D", "F"][:n_emotions]
     # load pairs
     SER_pairs = import_csv(filepath=filepath_SER)
-    emotion_dict = {i: 0 for i in range(6)}
+    # discard some emotion pairs
+    SER_pairs = [pair for pair in SER_pairs if pair[3] < n_emotions]
+    emotion_dict = {i: 0 for i in range(n_emotions)}
     for pair in SER_pairs:
         emotion_dict[pair[3]] += 1
 
@@ -194,12 +197,15 @@ def load_SER_export_train_val_test(dataset_path="datasets/crema-d",
 
 
 def split_SER_SV(pairs=[],
+                 n_emotions=4,
                  dataset_path="datasets/crema-d",
                  SER_file='SER_files.csv',
                  SV_file='SV_files.csv',
                  override=False):
     """Load files with labels and slit to male-female to avoid
-    trivial solutions. Export splitted files and verification file."""
+    trivial solutions. Export splitted files and verification file.
+    Then export emotion train/test/val to seperate files, while keeping
+    only the number of emotions given."""
 
     import random
 
@@ -290,7 +296,11 @@ def split_SER_SV(pairs=[],
     # shuffle and export to file
     export_verification_file(pairs=veri_couples, override=override)
 
-    load_SER_export_train_val_test(dataset_path=dataset_path,
+    # Export SER data to files to ensure that
+    # train/val/test remains constant.
+    # Also discard emotions greater than n_emotions.
+    load_SER_export_train_val_test(n_emotions=4,
+                                   dataset_path=dataset_path,
                                    SER_file=SER_file,
                                    train_val_test_ratio=[0.85, 0.1, 0.15],
                                    override=override)
@@ -304,6 +314,7 @@ if __name__ == "__main__":
     # Parse and export files & pairs & train val test
     file_pairs = read_label_file(dataset_path="datasets/crema-d")
     split_SER_SV(pairs=file_pairs,
+                 n_emotions=4,
                  dataset_path="datasets/crema-d",
                  SER_file='SER_files.csv',
                  SV_file='SV_files.csv',
