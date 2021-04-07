@@ -361,8 +361,8 @@ def load_CREMAD_SER(n_emotions=4,
     return X_train, y_train, X_test, y_test, X_val, y_val
 
 
-def load_CREAMAD_SV(SV_file="SV_files.csv",
-                    dataset_path="datasets/crema-d"):
+def load_CREMAD_SV(SV_file="SV_files.csv",
+                   dataset_path="datasets/crema-d"):
     """
 Return train_speakers and validation_speakers. 
 """
@@ -391,4 +391,4 @@ if __name__ == "__main__":
                  override=False)
     # return train test val split with labels
     load_CREMAD_SER(n_emotions=4)
-    load_CREAMAD_SV()
+    load_CREMAD_SV()
