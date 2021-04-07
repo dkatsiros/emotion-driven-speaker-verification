@@ -142,7 +142,7 @@ def read_label_file(dataset_path=None, filename="summaryTable.csv", source=0):
     return files_labels
 
 
-def load_SER_export_train_val_test(n_emotions=4,
+def load_SER_export_train_val_test(n_emotions=6,
                                    dataset_path="datasets/crema-d",
                                    SER_file='SER_files.csv',
                                    train_val_test_ratio=[0.85, 0.1, 0.15],
@@ -197,7 +197,7 @@ def load_SER_export_train_val_test(n_emotions=4,
 
 
 def split_SER_SV(pairs=[],
-                 n_emotions=4,
+                 n_emotions=6,
                  dataset_path="datasets/crema-d",
                  SER_file='SER_files.csv',
                  SV_file='SV_files.csv',
@@ -299,7 +299,7 @@ def split_SER_SV(pairs=[],
     # Export SER data to files to ensure that
     # train/val/test remains constant.
     # Also discard emotions greater than n_emotions.
-    load_SER_export_train_val_test(n_emotions=4,
+    load_SER_export_train_val_test(n_emotions=n_emotions,
                                    dataset_path=dataset_path,
                                    SER_file=SER_file,
                                    train_val_test_ratio=[0.85, 0.1, 0.15],
@@ -310,12 +310,55 @@ def split_SER_SV(pairs=[],
 # Loading and handling utils
 ############################
 
+def load_CREMAD_SER(n_emotions=4,
+                    dataset_path="datasets/crema-d",
+                    SER_file='SER_files.csv'):
+    """Return training, validation and testing (files,labels)"""
+    # create filenames
+    train_filepath = os.path.join(dataset_path,
+                                  EXPORTED_FOLDER,
+                                  SER_file[:-4] + 'train' + SER_file[-4:])
+
+    test_filepath = os.path.join(dataset_path,
+                                 EXPORTED_FOLDER,
+                                 SER_file[:-4] + 'test' + SER_file[-4:])
+
+    val_filepath = os.path.join(dataset_path,
+                                EXPORTED_FOLDER,
+                                SER_file[:-4] + 'val' + SER_file[-4:])
+
+    # make sure files exist
+    assert(os.path.exists(train_filepath))
+    assert(os.path.exists(test_filepath))
+    assert(os.path.exists(val_filepath))
+
+    # load pairs from files
+    # and keep only n_emotions
+    # train
+    train_pairs = import_csv(filepath=train_filepath)
+    X_train, y_train = zip(*[(x[0], x[3])
+                             for x in train_pairs if x[3] < n_emotions])
+    # test
+    test_pairs = import_csv(filepath=test_filepath)
+    X_test, y_test = zip(*[(x[0], x[3])
+                           for x in test_pairs if x[3] < n_emotions])
+    # validation
+    val_pairs = import_csv(filepath=val_filepath)
+    X_val, y_val = zip(*[(x[0], x[3])
+                         for x in val_pairs if x[3] < n_emotions])
+
+    # format in file-label
+    return X_train, y_train, X_test, y_test, X_val, y_val
+
+
 if __name__ == "__main__":
     # Parse and export files & pairs & train val test
     file_pairs = read_label_file(dataset_path="datasets/crema-d")
     split_SER_SV(pairs=file_pairs,
-                 n_emotions=4,
+                 n_emotions=6,
                  dataset_path="datasets/crema-d",
                  SER_file='SER_files.csv',
                  SV_file='SV_files.csv',
                  override=True)
+    # return train test val split with labels
+    load_CREMAD_SER(n_emotions=4)
