@@ -1,4 +1,5 @@
 import time
+import argparse
 import numpy as np
 import glob2 as glob
 from tqdm import tqdm
@@ -43,3 +44,11 @@ class PreComputeMelSpectrograms():
             return x
         except:
             return None
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser("Get paths..")
+    parser.add_argument('--path', metavar='p', type=str, nargs="+", default=[])
+    args = parser.parse_args()
+    paths = args.path
+    done = PreComputeMelSpectrograms(paths=paths)
