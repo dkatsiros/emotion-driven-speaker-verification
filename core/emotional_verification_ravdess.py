@@ -100,16 +100,16 @@ def test_se(model, dataloader, testing_epochs=1):
         # avg_EER.append(epoch_avg_EER)
         # avg_mindcf.append(batch_mindcf)
         tunedThreshold, EER, fpr, fnr = tuneThresholdfromScore(all_cossim,
-                                                                all_labels,
-                                                                [1, 0.1])
+                                                               all_labels,
+                                                               [1, 0.1])
         avg_EER.append(EER)
         print(f"\navg_EER (epoch:{ e+1 }): {EER:.2f}")
         logging.info(f"\navg_EER (epoch:{ e+1 }): {epoch_avg_EER:.2f}")
 
     # print("\n min_dcf across {0} epochs: {1:.2f} \pm {2:.2f}".format(
     #     testing_epochs, np.mean(avg_mindcf), np.std(avg_mindcf)))
-    return (round(EER, 2),0,
-            0,0)
+    return (round(EER, 2), 0,
+            0, 0)
 
 
 def test_ravdess(model=config.MODEL_TO_RESTORE,
@@ -258,6 +258,7 @@ the results to a file
         file.write(
             f"{model}\t{verification_file}\t{mean_eer}\t{std_eer}\t{mean_dcf}\t{std_dcf}\n")
 
+
 def export_latex(ifile=None, ofile=None):
     if ifile is None:
         raise AssertionError()
@@ -301,7 +302,7 @@ def export_latex(ifile=None, ofile=None):
             eer_weak.append(float(mean_eer))
             exp_details = verification_file[-9:][:-4]
             exp_num, intensity, emotion = exp_details.split('.')
-            result1 = "\SI{"+mean_eer  + "}"
+            result1 = "\SI{"+mean_eer + "}"
             relative_value_1 = round(
                 ((baseline - float(mean_eer)) / baseline * 100), 2)
             relative_weak.append(relative_value_1)
@@ -424,7 +425,6 @@ def exp4_export_latex(model=None, ofile=None):
 """)
 
 
-
 if __name__ == "__main__":
 
     # Set everthing up before starting training & testing
@@ -432,11 +432,10 @@ if __name__ == "__main__":
     # Core
     # mean_eer, std_eer, mean_dcf, std_dcf = test_ravdess()
 
-
     # ## EXPERIMENT 1 AND 2
     model = "checkpoints/emot_vox_ver2_lr=1e-1.pt"
-    model = model.replace("checkpoints/","")
-    for exp_num, intensity in [[1,1],[1,2],[2,1],[2,2]]:
+    model = model.replace("checkpoints/", "")
+    for exp_num, intensity in [[1, 1], [1, 2], [2, 1], [2, 2]]:
         test_ravdess_and_export(model=f"checkpoints/{model}",
                                 verification_file=f"datasets/ravdess/veri_files/veri_test_exp{exp_num}.{intensity}.txt",
                                 ofile=f"results/exp{exp_num}.{model}")
@@ -457,7 +456,7 @@ if __name__ == "__main__":
         for intensity in [1, 2]:
             verification_file = f"datasets/ravdess/veri_files/veri_test_exp3.{intensity}.{emotion}.txt"
             # exp4 only
-            ofile = f"results/exp4.{intensity}.{model.split('/')[-1][:-3]}.txt"
+            ofile = f"results/exp3.{intensity}.{model.split('/')[-1][:-3]}.txt"
             test_ravdess_and_export(model=model,
                                     verification_file=verification_file,
                                     ofile=ofile)
@@ -475,7 +474,7 @@ if __name__ == "__main__":
                                     verification_file=verification_file,
                                     ofile=ofile)
 
-    model = model.replace("checkpoints/","")
+    model = model.replace("checkpoints/", "")
     exp4_export_latex(model=model)
 # # #
     print(f"finished testing model: {model}.")
