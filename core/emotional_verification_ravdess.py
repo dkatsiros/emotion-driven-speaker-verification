@@ -263,8 +263,13 @@ def export_latex(ifile=None, ofile=None):
     if ifile is None:
         raise AssertionError()
     # get values from baseline file
+<<<<<<< HEAD
     baseline_values = [[11.46, 15.62, 15.1, 19.27, 20.31, 22.92, 18.23, 20.31],
                        [14.58, 35.42, 25.0, 44.79, 34.38, 25.0, 23.96]]
+=======
+    baseline_values = [[11.42, 13.80, 12.05, 18.07, 19.20, 22.94, 15.75],
+                       [13.47, 32.91, 22.86, 43.32, 34.85, 24.44, 22.14]]
+>>>>>>> emotional-content-on-speaker-verification
 
     with open(ifile, mode="r") as file:
         data = file.readlines()
@@ -302,7 +307,11 @@ def export_latex(ifile=None, ofile=None):
             eer_weak.append(float(mean_eer))
             exp_details = verification_file[-9:][:-4]
             exp_num, intensity, emotion = exp_details.split('.')
+<<<<<<< HEAD
             result1 = "\SI{"+mean_eer + "}"
+=======
+            result1 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+>>>>>>> emotional-content-on-speaker-verification
             relative_value_1 = round(
                 ((baseline - float(mean_eer)) / baseline * 100), 2)
             relative_weak.append(relative_value_1)
@@ -312,7 +321,11 @@ def export_latex(ifile=None, ofile=None):
             eer_strong.append(float(mean_eer))
             exp_details = verification_file[-9:][:-4]
             exp_num, intensity, emotion = exp_details.split('.')
+<<<<<<< HEAD
             result2 = "\SI{"+mean_eer + "}"
+=======
+            result2 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+>>>>>>> emotional-content-on-speaker-verification
             relative_value_2 = round(
                 (baseline_intense - float(mean_eer)) / baseline_intense * 100, 2)
             relative_strong.append(relative_value_2)
@@ -332,7 +345,11 @@ def export_latex(ifile=None, ofile=None):
         diff_strong = round(
             (baseline_mean_strong - mean_3) / baseline_mean_strong * 100, 2)
         file.write(
+<<<<<<< HEAD
             f"""\n3.8 & average & {mean_1} & {diff_weak:+}\% \% & {mean_3}  & {diff_strong:+}\% \% \\\\""")
+=======
+            f"""\n3.8 & average & {mean_1} ({diff_weak:+}\%) & {mean_2} \% & {mean_3} ({diff_strong:+}\%) & {mean_4} \% \\\\""")
+>>>>>>> emotional-content-on-speaker-verification
         file.write(""" \hline
  \end{tabular} \\break\\break\\break
 """)
@@ -349,8 +366,13 @@ def exp4_export_latex(model=None, ofile=None):
 
     relative_improvement_array = []
     # store baseline model values
+<<<<<<< HEAD
     baseline_values = [[16.67, 25.0, 17.45, 33.59, 30.99, 25.0, 22.66],
                        [8.48, 18.82, 19.79, 27.53, 27.98, 19.87, 16.37]]
+=======
+    baseline_values = [[13.29, 24.31, 17.87, 32.78, 29.31, 24.02, 22.53],
+                       [7.42, 16.61, 19.99, 26.17, 25.59, 18.17, 15.33]]
+>>>>>>> emotional-content-on-speaker-verification
     # store results
     exp_results_ignorance = []
     with open(ifile_ignorance, mode="r") as file:
@@ -393,12 +415,20 @@ def exp4_export_latex(model=None, ofile=None):
             model, verification_file, mean_eer_ignorance, std_eer, mean_dcf, std_dcf = ignorance
             # exp_details = verification_file[-9:][:-4]
             # exp_num, intensity, emotion = exp_details.split('.')
+<<<<<<< HEAD
             result1 = "\SI{"+mean_eer_ignorance + "}"
+=======
+            result1 = "\SI{"+mean_eer_ignorance + "\pm" + std_eer + "}"
+>>>>>>> emotional-content-on-speaker-verification
             # Strong emotion
             model, verification_file, mean_eer_knowledge, std_eer, mean_dcf, std_dcf = knowledge
             # exp_details = verification_file[-9:][:-4]
             # exp_num, intensity, emotion = exp_details.split('.')
+<<<<<<< HEAD
             result2 = "\SI{"+mean_eer_knowledge + "}"
+=======
+            result2 = "\SI{"+mean_eer_knowledge + "\pm" + std_eer + "}"
+>>>>>>> emotional-content-on-speaker-verification
             relative_improvement = round(
                 (float(mean_eer_ignorance) - float(mean_eer_knowledge)) / float(mean_eer_ignorance) * 100, 2)
             relative_improvement_array.append(relative_improvement)
@@ -432,6 +462,7 @@ if __name__ == "__main__":
     # Core
     # mean_eer, std_eer, mean_dcf, std_dcf = test_ravdess()
 
+<<<<<<< HEAD
     # ## EXPERIMENT 1 AND 2
     model = "checkpoints/emot_vox_ver2_lr=1e-1.pt"
     model = model.replace("checkpoints/", "")
@@ -478,3 +509,24 @@ if __name__ == "__main__":
     exp4_export_latex(model=model)
 # # #
     print(f"finished testing model: {model}.")
+=======
+    # export_visual_representation_2D(
+    #     ofile="datasets/ravdess/representation_exp2.1.npy")
+
+    # visualize("datasets/ravdess/representation_exp1.1.npy",
+    #           "datasets/ravdess/latent_space_exp1.1.png")
+    # model = "checkpoints/emot_frozenconv_voxceleb_lr=.5e-1.pt"
+    # ofile = f"results/exp3.{model.split('/')[-1][:-3]}.txt"
+    # for emotion in [1, 2, 3, 4, 5, 6, 7]:
+    #     for intensity in [1, 2]:
+    #         verification_file = f"datasets/ravdess/veri_files/veri_test_exp3.{intensity}.{emotion}.txt"
+    #         test_ravdess_and_export(model=model,
+    #                                 verification_file=verification_file,
+    #                                 ofile=ofile)
+
+    # export_latex(ifile=ofile)
+    # export_latex(
+    #     ifile="results/exp3.emot_voxceleb_lr=1e-1.txt")
+    exp4_export_latex(model="voxceleb_lr=1e-3.pt")
+#
+>>>>>>> emotional-content-on-speaker-verification

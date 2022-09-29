@@ -136,7 +136,7 @@ for sp, em, st, rep in itertools.product(range(SPEAKERS),
 ########################
 
 # NORMAL EMOTION IN ENROLLEMENT UTTERANCE
-# VERIFICATION UTTERANCE IS "EMOTION FREE"
+# VERIFICATION UTTERANCE IS EMOTIONAL
 # a list of tuples (label,utterance_1,utterance2)
 # which we will evaluate during test time for verification
 pairs_norm = []
