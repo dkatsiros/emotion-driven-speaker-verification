@@ -252,6 +252,10 @@ the results to a file
 def export_latex(ifile=None, ofile=None):
     if ifile is None:
         raise AssertionError()
+    # get values from baseline file
+    baseline_values = [[11.42, 13.80, 12.05, 18.07, 19.20, 22.94, 15.75],
+                       [13.47, 32.91, 22.86, 43.32, 34.85, 24.44, 22.14]]
+
     with open(ifile, mode="r") as file:
         data = file.readlines()
     exp_results = []
@@ -261,12 +265,12 @@ def export_latex(ifile=None, ofile=None):
         exp_results.append(
             (model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf))
     if ofile is None:
-        ofile = ifile[:-3] + '.tex'
-    HEADER = """\\begin{tabular}{ |p{0.8cm}|p{6cm}||p{2cm}|p{2cm}| }
+        ofile = ifile[:-3] + '_plus_relative' + '.tex'
+    HEADER = """\\begin{tabular}{ |p{0.8cm}|p{2cm}||p{2.5cm}|p{2cm}|p{2.5cm}|p{2cm}| }
  \hline
- \multicolumn{4}{|c|}{Neutral enrollment and \\textit{weak or strong} emotionally injected verification utterance} \\\\
+ \multicolumn{6}{|c|}{Neutral enrollment and \\textit{weak or strong} emotionally injected verification utterance} \\\\
  \hline
- Exp & emotion & weak & strong \\\\
+ Exp & emotion & weak & relative & strong & relative \\\\
  \hline
 """
     emotion_names = ["neutral", "calm", "happy", "sad",
@@ -276,23 +280,49 @@ def export_latex(ifile=None, ofile=None):
         file.write(HEADER)
         eer_weak = []
         eer_strong = []
-        for data, data_intense in zip(exp_results[::2], exp_results[1::2]):
+        relative_weak = []
+        relative_strong = []
+        for (data, data_intense,
+             baseline, baseline_intense) in zip(exp_results[::2],
+                                                exp_results[1::2],
+                                                baseline_values[0],
+                                                baseline_values[1]):
             # Weak emotion
             model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = data
-            eer_weak.append(mean_eer)
+            eer_weak.append(float(mean_eer))
             exp_details = verification_file[-9:][:-4]
             exp_num, intensity, emotion = exp_details.split('.')
             result1 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+            relative_value_1 = round(
+                ((baseline - float(mean_eer)) / baseline * 100), 2)
+            relative_weak.append(relative_value_1)
+            relative1 = f"{relative_value_1} \%"
             # Strong emotion
             model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = data_intense
-            eer_strong.append(mean_eer)
+            eer_strong.append(float(mean_eer))
             exp_details = verification_file[-9:][:-4]
             exp_num, intensity, emotion = exp_details.split('.')
             result2 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+            relative_value_2 = round(
+                (baseline_intense - float(mean_eer)) / baseline_intense * 100, 2)
+            relative_strong.append(relative_value_2)
+            relative2 = f"{relative_value_2} \%"
             # write file
             file.write(
-                f""" {exp_num}.{emotion} & {emotion_names[int(emotion)]}  & ${result1}$ & ${result2}$\\\\\n""")
+                f""" {exp_num}.{emotion} & {emotion_names[int(emotion)]}  & ${result1}$ & ${relative1}$ & ${result2}$ & ${relative2}$\\\\\n""")
         file.write("\hline")
+        mean_1 = round(np.mean(eer_weak), 2)
+        mean_2 = round(np.mean(relative_weak), 2)
+        mean_3 = round(np.mean(eer_strong), 2)
+        mean_4 = round(np.mean(relative_strong), 2)
+        baseline_mean_weak = round(np.mean(baseline_values[0]), 2)
+        baseline_mean_strong = round(np.mean(baseline_values[1]), 2)
+        diff_weak = round((baseline_mean_weak - mean_1) /
+                          baseline_mean_weak * 100, 2)
+        diff_strong = round(
+            (baseline_mean_strong - mean_3) / baseline_mean_strong * 100, 2)
+        file.write(
+            f"""\n3.8 & average & {mean_1} ({diff_weak:+}\%) & {mean_2} \% & {mean_3} ({diff_strong:+}\%) & {mean_4} \% \\\\""")
         file.write(""" \hline
  \end{tabular} \\break\\break\\break
 """)
@@ -307,6 +337,10 @@ def exp4_export_latex(model=None, ofile=None):
     if not os.path.exists(ifile_knowledge):
         raise FileNotFoundError()
 
+    relative_improvement_array = []
+    # store baseline model values
+    baseline_values = [[13.29, 24.31, 17.87, 32.78, 29.31, 24.02, 22.53],
+                       [7.42, 16.61, 19.99, 26.17, 25.59, 18.17, 15.33]]
     # store results
     exp_results_ignorance = []
     with open(ifile_ignorance, mode="r") as file:
@@ -332,11 +366,11 @@ def exp4_export_latex(model=None, ofile=None):
     if ofile is None:
         ofile = f"results/results_exp4.{model[:-3]}.tex"
 
-    HEADER = """\\begin{tabular}{ |p{0.8cm}|p{2cm}||p{2cm}|p{2cm}| }
+    HEADER = """\\begin{tabular}{ |p{0.8cm}|p{2cm}||p{2.5cm}|p{2.5cm}|p{2cm}| }
  \hline
- \multicolumn{4}{|c|}{Emotion ignorance vs emotion knowledge for model } \\\\
+ \multicolumn{5}{|c|}{Emotion ignorance vs emotion knowledge for model } \\\\
  \hline
- Exp & emotion & ignorance & knowledge \\\\
+ Exp & emotion & ignorance & knowledge & relative \\\\
  \hline
 """
     emotion_names = ["neutral", "calm", "happy", "sad",
@@ -346,24 +380,36 @@ def exp4_export_latex(model=None, ofile=None):
         file.write(HEADER)
         for idx, (ignorance, knowledge) in enumerate(zip(exp_results_ignorance, exp_results_knowledge), 1):
             # ignorance
-            model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = ignorance
+            model, verification_file, mean_eer_ignorance, std_eer, mean_dcf, std_dcf = ignorance
             # exp_details = verification_file[-9:][:-4]
             # exp_num, intensity, emotion = exp_details.split('.')
-            result1 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+            result1 = "\SI{"+mean_eer_ignorance + "\pm" + std_eer + "}"
             # Strong emotion
-            model, verification_file, mean_eer, std_eer, mean_dcf, std_dcf = knowledge
+            model, verification_file, mean_eer_knowledge, std_eer, mean_dcf, std_dcf = knowledge
             # exp_details = verification_file[-9:][:-4]
             # exp_num, intensity, emotion = exp_details.split('.')
-            result2 = "\SI{"+mean_eer + "\pm" + std_eer + "}"
+            result2 = "\SI{"+mean_eer_knowledge + "\pm" + std_eer + "}"
+            relative_improvement = round(
+                (float(mean_eer_ignorance) - float(mean_eer_knowledge)) / float(mean_eer_ignorance) * 100, 2)
+            relative_improvement_array.append(relative_improvement)
+            result3 = f"{relative_improvement} \%"
             # write file
             file.write(
-                f""" 4.{idx} & {emotion_names[int(idx)]}  & ${result1}$ & ${result2}$\\\\\n""")
+                f""" 4.{idx} & {emotion_names[int(idx)]}  & ${result1}$ & ${result2}$ & ${result3}$\\\\\n""")
         # mean EER
         avg_ignorance = np.mean([float(x[2]) for x in exp_results_ignorance])
         avg_knowledge = np.mean([float(x[2]) for x in exp_results_knowledge])
+        avg_baseline_ignorance = np.mean(baseline_values[0])
+        avg_baseline_knowledge = np.mean(baseline_values[1])
+        avg_relative_baseline_impr_ignorance = round((
+            avg_baseline_ignorance - avg_ignorance) / avg_baseline_ignorance * 100, 2)
+        avg_relative_baseline_impr_knowledge = round((
+            avg_baseline_knowledge - avg_knowledge) / avg_baseline_knowledge * 100, 2)
+        avg_relative_improvement = round(
+            np.mean(relative_improvement_array), 2)
         file.write("\hline")
         file.write(
-            f""" 4.{len(exp_results_ignorance)+1} & average  & ${avg_ignorance:.2f}$ & ${avg_knowledge:.2f}$\\\\\n""")
+            f""" 4.{len(exp_results_ignorance)+1} & average  & ${avg_ignorance:.2f}\ ({avg_relative_baseline_impr_ignorance:+} \%)$ & ${avg_knowledge:.2f}\ ({avg_relative_baseline_impr_knowledge:+} \%)$ & ${avg_relative_improvement} \%$\\\\\n""")
         file.write(""" \hline
  \end{tabular} \\break\\break\\break
 """)
@@ -381,15 +427,17 @@ if __name__ == "__main__":
 
     # visualize("datasets/ravdess/representation_exp1.1.npy",
     #           "datasets/ravdess/latent_space_exp1.1.png")
-    model = "checkpoints/emot_frozenconv_voxceleb_lr=.5e-1.pt"
-    ofile = f"results/exp3.{model.split('/')[-1][:-3]}.txt"
-    for emotion in [1, 2, 3, 4, 5, 6, 7]:
-        for intensity in [1, 2]:
-            verification_file = f"datasets/ravdess/veri_files/veri_test_exp3.{intensity}.{emotion}.txt"
-            test_ravdess_and_export(model=model,
-                                    verification_file=verification_file,
-                                    ofile=ofile)
+    # model = "checkpoints/emot_frozenconv_voxceleb_lr=.5e-1.pt"
+    # ofile = f"results/exp3.{model.split('/')[-1][:-3]}.txt"
+    # for emotion in [1, 2, 3, 4, 5, 6, 7]:
+    #     for intensity in [1, 2]:
+    #         verification_file = f"datasets/ravdess/veri_files/veri_test_exp3.{intensity}.{emotion}.txt"
+    #         test_ravdess_and_export(model=model,
+    #                                 verification_file=verification_file,
+    #                                 ofile=ofile)
 
     # export_latex(ifile=ofile)
-    # exp4_export_latex(model="emot_frozen1stconv_voxceleb_lr=1e-2.pt")
+    # export_latex(
+    #     ifile="results/exp3.emot_voxceleb_lr=1e-1.txt")
+    exp4_export_latex(model="voxceleb_lr=1e-3.pt")
 #
